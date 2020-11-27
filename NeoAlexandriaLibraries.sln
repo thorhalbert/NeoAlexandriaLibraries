@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30717.126
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeoAssets", "NeoAssets\NeoAssets.csproj", "{2BFED3EA-C28A-4637-9904-31B1793AC233}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Setup", "Setup", "{A63E5B95-9CFC-4A74-8DB3-7E6901319E6D}"
+	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+		README.md = README.md
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2BFED3EA-C28A-4637-9904-31B1793AC233}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2BFED3EA-C28A-4637-9904-31B1793AC233}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2BFED3EA-C28A-4637-9904-31B1793AC233}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2BFED3EA-C28A-4637-9904-31B1793AC233}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9E8FBEA0-7638-46EE-86E0-1826B23978C5}
+	EndGlobalSection
+EndGlobal
