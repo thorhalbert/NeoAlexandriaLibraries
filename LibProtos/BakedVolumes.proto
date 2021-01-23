@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+option csharp_namespace = "BakedFileService.Protos";
+
+package bakedvolumes;
+
+// The greeting service definition.
+service BakedVolumeData {
+  // Sends a greeting
+  rpc Fetch (FetchRequest) returns (FetchPayload);
+}
+
+// The request message containing the user's name.
+message FetchRequest {
+  string BakedVolume = 1;
+  string Part = 2;
+  int32 Offset = 3;
+  int32 RequestCount = 4;
+}
+
+// The response message containing the greetings.
+message FetchPayload {
+   string Error = 1;
+   int32 ErrNo = 2;
+   bytes Payload = 3;
+   int32 Length = 4;  // Probably redundant
+   bool PoolMoved = 5; // Got an error and tracked it down - invalidate your cache
+}

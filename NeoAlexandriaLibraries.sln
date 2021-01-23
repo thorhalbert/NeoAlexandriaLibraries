@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30717.126
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeoAssets", "NeoAssets\NeoAssets.csproj", "{2BFED3EA-C28A-4637-9904-31B1793AC233}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeoAssets", "NeoAssets\NeoAssets.csproj", "{2BFED3EA-C28A-4637-9904-31B1793AC233}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Setup", "Setup", "{A63E5B95-9CFC-4A74-8DB3-7E6901319E6D}"
 	ProjectSection(SolutionItems) = preProject
@@ -11,11 +11,30 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Setup", "Setup", "{A63E5B95
 		README.md = README.md
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeoBakedVolumes", "NeoBakedVolumes\NeoBakedVolumes.csproj", "{E73A1096-293B-46A1-8A17-9F3DA2005319}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeoBakedVolumes", "NeoBakedVolumes\NeoBakedVolumes.csproj", "{E73A1096-293B-46A1-8A17-9F3DA2005319}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeoRepositories", "NeoRepositories\NeoRepositories.csproj", "{2D405416-09BC-483E-B17E-7BF27F43F7A7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeoRepositories", "NeoRepositories\NeoRepositories.csproj", "{2D405416-09BC-483E-B17E-7BF27F43F7A7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeoCuratedCollections", "NeoCuratedCollections\NeoCuratedCollections.csproj", "{FEFA0CA6-FF13-4145-AA9C-5122B7BA40F5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeoCuratedCollections", "NeoCuratedCollections\NeoCuratedCollections.csproj", "{FEFA0CA6-FF13-4145-AA9C-5122B7BA40F5}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeoCommon", "NeoCommon\NeoCommon.csproj", "{8EC9883B-60B1-4AC9-89F8-F81D72B04B18}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeoAlexandriaManager", "NeoAlexandriaManager\NeoAlexandriaManager.csproj", "{1DFBB58A-99D5-42B3-A04D-886DA8162CA7}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeoAlexandriaService", "NeoAlexandriaService\NeoAlexandriaService.csproj", "{0882B724-7673-4D6E-98AA-EF8BB6921216}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{05F2F80D-302B-4ABF-907A-3FD07B068A5D}"
+	ProjectSection(SolutionItems) = preProject
+		.filenesting.json = .filenesting.json
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeoScry", "NeoScry\NeoScry.csproj", "{C9745088-44A8-4EF9-BD42-558D61F6E8E4}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tester", "Tester\Tester.csproj", "{7E1A5D8F-EC99-4659-9B45-FFCB6EB908EC}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BakedFileService", "BakedFileService\BakedFileService.csproj", "{6164CE04-2C0E-4DC4-BDBB-F94839CEBCD0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibProtos", "LibProtos\LibProtos.csproj", "{22AD55D5-25EC-49B5-8EE0-05D42C0D1405}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,6 +58,34 @@ Global
 		{FEFA0CA6-FF13-4145-AA9C-5122B7BA40F5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FEFA0CA6-FF13-4145-AA9C-5122B7BA40F5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FEFA0CA6-FF13-4145-AA9C-5122B7BA40F5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8EC9883B-60B1-4AC9-89F8-F81D72B04B18}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8EC9883B-60B1-4AC9-89F8-F81D72B04B18}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8EC9883B-60B1-4AC9-89F8-F81D72B04B18}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8EC9883B-60B1-4AC9-89F8-F81D72B04B18}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1DFBB58A-99D5-42B3-A04D-886DA8162CA7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1DFBB58A-99D5-42B3-A04D-886DA8162CA7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1DFBB58A-99D5-42B3-A04D-886DA8162CA7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1DFBB58A-99D5-42B3-A04D-886DA8162CA7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0882B724-7673-4D6E-98AA-EF8BB6921216}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0882B724-7673-4D6E-98AA-EF8BB6921216}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0882B724-7673-4D6E-98AA-EF8BB6921216}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0882B724-7673-4D6E-98AA-EF8BB6921216}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C9745088-44A8-4EF9-BD42-558D61F6E8E4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C9745088-44A8-4EF9-BD42-558D61F6E8E4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C9745088-44A8-4EF9-BD42-558D61F6E8E4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C9745088-44A8-4EF9-BD42-558D61F6E8E4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7E1A5D8F-EC99-4659-9B45-FFCB6EB908EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7E1A5D8F-EC99-4659-9B45-FFCB6EB908EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7E1A5D8F-EC99-4659-9B45-FFCB6EB908EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7E1A5D8F-EC99-4659-9B45-FFCB6EB908EC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6164CE04-2C0E-4DC4-BDBB-F94839CEBCD0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6164CE04-2C0E-4DC4-BDBB-F94839CEBCD0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6164CE04-2C0E-4DC4-BDBB-F94839CEBCD0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6164CE04-2C0E-4DC4-BDBB-F94839CEBCD0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{22AD55D5-25EC-49B5-8EE0-05D42C0D1405}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{22AD55D5-25EC-49B5-8EE0-05D42C0D1405}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{22AD55D5-25EC-49B5-8EE0-05D42C0D1405}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{22AD55D5-25EC-49B5-8EE0-05D42C0D1405}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

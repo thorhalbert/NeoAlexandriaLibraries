@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <UserSecretsId>c6a8fe48-a7a5-42b6-a19c-cece2444d228</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MatBlazor" Version="2.8.0" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="5.0.1" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.10.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NeoCommon\NeoCommon.csproj" />
+  </ItemGroup>
+
+</Project>

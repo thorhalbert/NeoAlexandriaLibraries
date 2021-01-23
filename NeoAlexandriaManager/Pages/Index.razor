@@ -1,0 +1,26 @@
+﻿@page "/"
+
+<h1>Hello, world!</h1>
+
+Welcome to your new app.
+
+<SurveyPrompt Title="How is Blazor working for you?" />
+
+
+
+<MatButton OnClick="@Click">Text @ButtonState</MatButton>
+<MatButton Raised="true">Raised</MatButton>
+<MatButton Unelevated="true">Unelevated</MatButton>
+<MatButton Outlined="true">Outlined</MatButton>
+<MatButton Dense="true">Dense</MatButton>
+
+@code
+{
+    string ButtonState = "";
+
+
+    void Click(MouseEventArgs e)
+    {
+        ButtonState = "Clicked";
+    }
+} 

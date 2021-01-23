@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Tester": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "MONGO_URI": "mongodb://feanor,gilraen,radagast/NeoAlexandria?replicaSet=repA"
+      }
+    }
+  }
+}
