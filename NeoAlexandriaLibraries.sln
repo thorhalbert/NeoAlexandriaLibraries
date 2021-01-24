@@ -26,6 +26,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{05F2F80D-302B-4ABF-907A-3FD07B068A5D}"
 	ProjectSection(SolutionItems) = preProject
 		.filenesting.json = .filenesting.json
+		publish_push.sh = publish_push.sh
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeoScry", "NeoScry\NeoScry.csproj", "{C9745088-44A8-4EF9-BD42-558D61F6E8E4}"
@@ -34,7 +35,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tester", "Tester\Tester.csp
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BakedFileService", "BakedFileService\BakedFileService.csproj", "{6164CE04-2C0E-4DC4-BDBB-F94839CEBCD0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibProtos", "LibProtos\LibProtos.csproj", "{22AD55D5-25EC-49B5-8EE0-05D42C0D1405}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LibProtos", "LibProtos\LibProtos.csproj", "{22AD55D5-25EC-49B5-8EE0-05D42C0D1405}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

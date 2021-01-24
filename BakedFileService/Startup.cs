@@ -18,8 +18,8 @@ namespace BakedFileService
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddGrpc();
-            //services.AddMemoryCache();
-            services.AddSingleton<IVolumeCache, VolumeOpenCache>();
+            services.AddMemoryCache();
+            //services.AddSingleton<IVolumeCache, VolumeOpenCache>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -35,6 +35,7 @@ namespace BakedFileService
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapGrpcService<GreeterService>();
+                endpoints.MapGrpcService<BakedVolumeService>();
 
                 endpoints.MapGet("/", async context =>
                 {

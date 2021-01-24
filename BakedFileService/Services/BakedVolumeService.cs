@@ -27,7 +27,7 @@ namespace BakedFileService
         IMemoryCache openFileCache;
         private IMongoCollection<BakedVolumes> bvs;
         private readonly ILogger<BakedVolumeService> _logger;
-        private const int BUFSIZ= 1024*1024*1024;
+        private const int BUFSIZ= 4096*1024;   // 4MiB
         byte[] buffer = new byte[BUFSIZ];
 
         public BakedVolumeService(ILogger<BakedVolumeService> logger, IMemoryCache cache)
@@ -62,11 +62,15 @@ namespace BakedFileService
 
 
             var retRec = new FetchPayload();
+            retRec.Error = String.Empty;
 
             if (cache.VolumeStream==null)
-                cache.OpenStream();
-            if (retRec.Error != null)
+                retRec = cache.OpenStream();
+            if (retRec.Error != String.Empty)
+            {
+                Console.WriteLine($"? Encountered error: {retRec.Error}");
                 return retRec;
+            }
 
             // Now if the file is gone/moved we might get an error seeking
 
@@ -76,6 +80,8 @@ namespace BakedFileService
 
             retRec.Length = count;  // Not sure what's efficient here - nice if we didn't have to copy
             retRec.Payload = ByteString.CopyFrom(buffer, 0, count);
+
+            Console.WriteLine($"[Read {count} bytes]");
 
             return retRec;
         }
@@ -102,6 +108,8 @@ namespace BakedFileService
                 Part = part;
 
                 logger = _logger;
+
+                Console.WriteLine($"[Setup cache for {Volume}/{Part}]");
             }
 
             public FetchPayload OpenStream()
@@ -139,6 +147,8 @@ namespace BakedFileService
                         logger.LogError(ex, $"Cannot open file {fName} for {Volume}/{Part}");
                     return retRec;
                 }
+
+                Console.WriteLine($"[Open Volume: {fName}]");
 
                 return retRec;
             }

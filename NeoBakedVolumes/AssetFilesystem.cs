@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.FileProviders;
+﻿using BakedFileService.Protos;
+using Grpc.Net.Client;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
 using MongoDB.Driver;
 using NeoBakedVolumes.Mongo;
@@ -51,6 +53,7 @@ namespace AssetFileSystem
 
         private BakedAssets baRec = null;
         private BakedVolumes volRec;
+        internal static BakedVolumeData.BakedVolumeDataClient assetClient;
 
         public File(string subpath, MongoDatabaseBase db, IMongoCollection<BakedAssets> bac)
         {
@@ -71,6 +74,9 @@ namespace AssetFileSystem
 
             var volFilter = Builders<BakedVolumes>.Filter.Eq("_id", baRec.Volume);
             volRec = vCol.FindSync(volFilter).FirstOrDefault();
+
+            var channel = GrpcChannel.ForAddress("http://feanor:5000");
+            assetClient = new BakedVolumeData.BakedVolumeDataClient(channel);
         }
 
         public bool Exists => baRec != null;
@@ -128,7 +134,16 @@ namespace AssetFileSystem
 
             public override int Read(byte[] buffer, int offset, int count)
             {
-                throw new NotImplementedException();
+                var returnVal = assetClient.Fetch(new FetchRequest()
+                {
+                    BakedVolume = volRec._id,
+                    Part = baRec.Part,
+                    Offset = offset,
+                    RequestCount = count,
+                });
+
+                returnVal.Payload.CopyTo(buffer, 0);
+                return returnVal.Length;
             }
 
             public override long Seek(long offset, SeekOrigin origin)
