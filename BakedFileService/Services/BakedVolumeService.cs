@@ -27,7 +27,7 @@ namespace BakedFileService
         IMemoryCache openFileCache;
         private IMongoCollection<BakedVolumes> bvs;
         private readonly ILogger<BakedVolumeService> _logger;
-        private const int BUFSIZ= 4096*1024;   // 4MiB
+        public const int BUFSIZ= 4096*1024;   // 4MiB
         byte[] buffer = new byte[BUFSIZ];
 
         public BakedVolumeService(ILogger<BakedVolumeService> logger, IMemoryCache cache)

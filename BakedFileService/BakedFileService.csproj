@@ -6,10 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Protobuf Include="Protos\greet.proto" GrpcServices="Both" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Grpc.AspNetCore" Version="2.34.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="5.0.0" />
   </ItemGroup>
@@ -19,6 +15,10 @@
     <ProjectReference Include="..\NeoAssets\NeoAssets.csproj" />
     <ProjectReference Include="..\NeoBakedVolumes\NeoBakedVolumes.csproj" />
     <ProjectReference Include="..\NeoCommon\NeoCommon.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Protos\" />
   </ItemGroup>
 
 </Project>

@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option csharp_namespace = "BakedFileService";
+option csharp_namespace = "NeoAlexandriaService";
 
 package greet;
 
@@ -17,5 +17,8 @@ message HelloRequest {
 
 // The response message containing the greetings.
 message HelloReply {
-  string message = 1;
+  string Service = 1;
+  uint64 Uptime =2;
+  uint64 BakedFileServiceMaxBuffer =3;
+  string HostName=4;
 }
