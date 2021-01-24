@@ -37,6 +37,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BakedFileService", "BakedFi
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LibProtos", "LibProtos\LibProtos.csproj", "{22AD55D5-25EC-49B5-8EE0-05D42C0D1405}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeoDokan_AssetFs", "NeoDokan_AssetFs\NeoDokan_AssetFs.csproj", "{B7D90558-25AA-4BEE-B608-CC0BA6BEF340}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -87,6 +89,10 @@ Global
 		{22AD55D5-25EC-49B5-8EE0-05D42C0D1405}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{22AD55D5-25EC-49B5-8EE0-05D42C0D1405}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{22AD55D5-25EC-49B5-8EE0-05D42C0D1405}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B7D90558-25AA-4BEE-B608-CC0BA6BEF340}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B7D90558-25AA-4BEE-B608-CC0BA6BEF340}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B7D90558-25AA-4BEE-B608-CC0BA6BEF340}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B7D90558-25AA-4BEE-B608-CC0BA6BEF340}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
