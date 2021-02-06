@@ -1,0 +1,281 @@
+﻿@page "/clusterdisks"
+
+@using Microsoft.AspNetCore.SignalR.Client 
+@using NeoAlexandriaManager.Data
+@inject NavigationManager NavigationManager
+@implements IAsyncDisposable 
+@using MongoDB.Bson
+@inject DiskWatcherService GetDisks
+
+<h1>Cluster Disks</h1>
+
+
+    <MatTable Items="@diskData" class="mat-elevation-z5" PageSize=9999 ShowPaging="true" UseSortHeaderRow="true" Striped="true">
+        <MatTableHeader>
+            <MatSortHeaderRow SortChanged="@sortDisks">
+                <th>Baked</th>
+                <MatSortHeader SortId="name"><span style="width:200px">Name</span></MatSortHeader>
+                <MatSortHeader SortId="host">Host</MatSortHeader>
+                <MatSortHeader SortId="capacity">Capacity</MatSortHeader>
+                <MatSortHeader>UOM</MatSortHeader>
+                <MatSortHeader SortId="free">Free</MatSortHeader>
+                <MatSortHeader>UOM</MatSortHeader>
+            </MatSortHeaderRow>
+        </MatTableHeader>
+        <MatTableRow>
+            <td><MatIcon Icon="@context.Icon"></MatIcon></td>
+            <td>@context.Disk</td>
+            <td>@context.Host</td>
+            <td align="right">@context.Capacity.ToString("0.00")</td>
+            <td>@context.CapUOM</td>
+            <td align="right">@context.Free.ToString("0.00")</td>
+            <td>@context.FreeUOM</td>
+        </MatTableRow>
+    </MatTable>
+
+
+
+
+
+@code {
+    class DiskLists
+    {
+        // Capacity/CapUOM column should actually get sorted by RealCap, but there
+        //  doesn't appear to be a way to do that yet.
+
+        public string Icon { get; set; }
+        public string Disk { get; set; }
+        public string Host { get; set; }
+        public string Type { get; set; }
+        public double Capacity { get; set; }
+        public double RealCap { get; set; }
+        public string CapUOM { get; set; }
+        public double Free { get; set; }
+        public double RealFree { get; set; }
+        public string FreeUOM { get; set; }
+        public float FreePct { get; set; }
+
+        public DiskLists(BsonDocument doc)
+        {
+            Disk = doc["Name"].AsString;
+
+            Host = "";
+            if (doc.Contains("HostedOn"))
+                Host = doc["HostedOn"].AsString;
+
+            // If the HostedOn exists, then we have a local stat
+            if (doc.Contains("StatVFS"))
+            {
+                getStats(doc["StatVFS"].AsBsonDocument.ToDictionary());
+            }
+            else
+            {
+                // We have to find the latest report (Host is not direct connected)
+                // Disk is indirectly connected
+
+                var hosts = doc["Hosts"];
+
+                var val = hosts.AsBsonDocument.ToDictionary();
+
+                double lastReport = 0;
+                Dictionary<string, object> lastVfs = null;
+
+                foreach (var host in val)
+                {
+                    var part = (Dictionary<string,object>)  host.Value;
+
+                    var last = (double) part["LastReport"];
+                    var vfs = (Dictionary<string, object>) part["StatVFS"];
+
+                    if (last>lastReport)
+                    {
+                        lastReport = last;
+                        lastVfs = vfs;
+                    }
+                }
+
+                if (lastVfs != null)
+                    getStats(lastVfs);
+
+            }
+
+            Icon = null;
+            if (doc.Contains("BakedStatus"))
+            {
+                switch (doc["BakedStatus"].AsInt32)
+                {
+                    case 1:
+                        Icon = "sentiment_very_dissatisfied";
+                        break;
+                    case 2:
+                        Icon = "sentiment_dissatisfied";
+                        break;
+                    case 3:
+                        Icon = "sentiment_satisfied";
+                        break;
+                    case 4:
+                        Icon = "sentiment_very_satisfied";
+                        break;
+                    case 5:
+                        Icon = "remove_circle_outline";
+                        break;
+                    case 6:
+                        Icon = "report";
+                        break;
+                }
+            }
+
+        }
+
+        public void getStats(Dictionary<string,object> doc)
+        {
+            ulong cap = Convert.ToUInt64(doc["f_blocks"]) * Convert.ToUInt64(doc["f_bsize"]);
+
+            //var megs = capacity / (1024.0 * 1024.0 * 1024.0);
+
+            //base2 = math.log10(megs) / math.log10(2.0)
+            //grade = chr(65 + int(base2))
+
+            RealCap = cap;  // Need to store this so we can sort it
+
+            (Capacity, CapUOM) = hr(cap);
+
+            ulong free = Convert.ToUInt64(doc["f_bfree"]) * Convert.ToUInt64(doc["f_bsize"]);
+
+            RealFree = free;
+
+            (Free, FreeUOM) = hr(free);
+        }
+
+    }
+
+
+
+    static public (double, string) hr(double value)
+    {
+        var uom = "B";
+
+        if (value > 1024.0f)
+        {
+            uom = "KiB";
+            value /= 1024.0f;
+        }
+        if (value > 1024.0)
+        {
+            uom = "MiB";
+            value /= 1024.0f;
+        }
+        if (value > 1024.0f)
+        {
+            uom = "GiB";
+            value /= 1024.0f;
+        }
+        if (value > 1024.0f)
+        {
+            uom = "TiB";
+            value /= 1024.0f;
+        }
+
+        return (value, uom);
+    }
+
+    DiskLists[] diskData = null;
+    DiskLists[] sortedDisks = null;
+
+    void sortDisks(MatSortChangedEvent sort)
+    {
+        sortedDisks = diskData;
+        if (!(sort == null || sort.Direction == MatSortDirection.None || string.IsNullOrEmpty(sort.SortId)))
+        {
+            Comparison<DiskLists> comparison = null;
+            switch (sort.SortId)
+            {
+                case "name":
+                case "host":
+                    comparison = (s1, s2) => string.Compare(s1.Disk, s2.Disk, StringComparison.InvariantCultureIgnoreCase);
+                    break;
+                case "capacity":
+                case "free":
+                    comparison = (s1, s2) => s1.Host.CompareTo(s2.Host);
+                    break;
+            }
+            if (comparison != null)
+            {
+                if (sort.Direction == MatSortDirection.Desc)
+                {
+                    Array.Sort(sortedDisks, (s1, s2) => -1 * comparison(s1, s2));
+                }
+                else
+                {
+                    Array.Sort(sortedDisks, comparison);
+                }
+            }
+        }
+    }
+
+    private HubConnection hubConnection;
+    private List<BsonDocument> messages = new List<BsonDocument>();
+
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        var ds = new DiskWatcherService();
+
+        var disks = await ds.GetDisks();
+
+        var diskl = new List<DiskLists>();
+        foreach (var i in disks)
+            diskl.Add( new DiskLists(i));
+
+        diskData =  diskl.ToArray();
+        sortedDisks = diskData;
+
+        var uri = NavigationManager.ToAbsoluteUri("/watcherflow");
+        uri = new Uri("https://localhost:49163/watcherflow");
+        Console.WriteLine($"Client Uri: {uri.ToString()}");
+
+        hubConnection = new HubConnectionBuilder()
+            .ConfigureLogging(logging => {
+                //logging.AddDebug();
+                //logging.SetMinimumLevel(LogLevel.Debug);
+            })
+            .WithAutomaticReconnect()
+            .WithUrl(uri)
+            .Build();
+
+        hubConnection.Reconnecting += error =>
+        {
+            //Debug.Assert(hubConnection.State == HubConnectionState.Reconnecting);
+
+            // Notify users the connection was lost and the client is reconnecting.
+            // Start queuing or dropping messages.
+
+            return Task.CompletedTask;
+        };
+
+        hubConnection.Reconnected += connectionId =>
+        {
+
+            return Task.CompletedTask;
+        };
+
+        await hubConnection.StartAsync();
+
+        var channel = await hubConnection.StreamAsChannelAsync<BsonDocument>("GenerateWatchStream");
+        while (await channel.WaitToReadAsync())
+        {
+            while (channel.TryRead(out BsonDocument data))
+            {
+                Console.WriteLine($"Received {data}");
+
+                StateHasChanged();
+            }
+        }
+    }
+
+    ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        return new ValueTask();
+    }
+}
