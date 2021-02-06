@@ -33,6 +33,9 @@ namespace NeoBakedVolumes
         {
 
             return new AssetFileSystem.File(subpath, db, bac);
+
+
+            throw new NotImplementedException();
         }
 
         public IChangeToken Watch(string filter)
@@ -49,12 +52,12 @@ namespace NeoBakedVolumes
             IEnumerator<IFileInfo> IEnumerable<IFileInfo>.GetEnumerator()
             {
                 return (IEnumerator<IFileInfo>) new List<IFileInfo>();
-            }
+    }
 
             IEnumerator IEnumerable.GetEnumerator()
             {
                 return (IEnumerator<IFileInfo>)new List<IFileInfo>();
-            }
+}
         }
     }
 }

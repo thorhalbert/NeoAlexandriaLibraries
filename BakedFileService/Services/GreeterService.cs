@@ -1,5 +1,6 @@
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
+using NeoAlexandriaService;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,7 +20,10 @@ namespace BakedFileService
         {
             return Task.FromResult(new HelloReply
             {
-                Message = "Hello " + request.Name
+                Service = "BakedFileService",
+                Uptime = (ulong)(DateTimeOffset.Now - Startup.StartupTime).Ticks,
+                HostName = Environment.MachineName,
+                BakedFileServiceMaxBuffer = BakedVolumeService.BUFSIZ
             });
         }
     }

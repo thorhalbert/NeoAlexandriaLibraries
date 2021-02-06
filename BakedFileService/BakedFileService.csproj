@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
+    <UserSecretsId>6e66b0ed-3830-4dbc-8ab0-fd4d8d46204f</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,6 +19,10 @@
     <ProjectReference Include="..\NeoAssets\NeoAssets.csproj" />
     <ProjectReference Include="..\NeoBakedVolumes\NeoBakedVolumes.csproj" />
     <ProjectReference Include="..\NeoCommon\NeoCommon.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Protos\" />
   </ItemGroup>
 
 </Project>

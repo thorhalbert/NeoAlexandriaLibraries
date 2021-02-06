@@ -27,7 +27,8 @@ namespace BakedFileService
         IMemoryCache openFileCache;
         private IMongoCollection<BakedVolumes> bvs;
         private readonly ILogger<BakedVolumeService> _logger;
-        private const int BUFSIZ= 1024*1024*1024;
+        // Supposedly protobuf isn't so efficient after 1mb -- we'll test
+        public const int BUFSIZ= 4096*1024;   // 4MiB
         byte[] buffer = new byte[BUFSIZ];
 
         public BakedVolumeService(ILogger<BakedVolumeService> logger, IMemoryCache cache)
@@ -58,15 +59,26 @@ namespace BakedFileService
             
             openFileCache.Set<VolCacheRec>(cacheKey, cache);
 
-            var attempts = 0;
+            // Our caches work, but we're not really managing any kind of residency.
+            // We'll play with this and see how they work, but it's trivial to
+            // simply DDOS the cache into insanity.
 
+            // We're also not handling error retry, though that may not be our job.
+            // We may have to make some specific errors flow back so the client can
+            // deal with a moved file or a service down.   It theoretically can even
+            // use the X file if one of the main 4 is not available to regen the
+            // data flow with XOR (in degraded mode).   This service will read any part.
 
             var retRec = new FetchPayload();
+            retRec.Error = String.Empty;
 
             if (cache.VolumeStream==null)
-                cache.OpenStream();
-            if (retRec.Error != null)
+                retRec = cache.OpenStream();
+            if (retRec.Error != String.Empty)
+            {
+                Console.WriteLine($"? Encountered error: {retRec.Error}");
                 return retRec;
+            }
 
             // Now if the file is gone/moved we might get an error seeking
 
@@ -76,6 +88,8 @@ namespace BakedFileService
 
             retRec.Length = count;  // Not sure what's efficient here - nice if we didn't have to copy
             retRec.Payload = ByteString.CopyFrom(buffer, 0, count);
+
+            Console.WriteLine($"[Read {count} bytes]");
 
             return retRec;
         }
@@ -102,6 +116,8 @@ namespace BakedFileService
                 Part = part;
 
                 logger = _logger;
+
+                Console.WriteLine($"[Setup cache for {Volume}/{Part}]");
             }
 
             public FetchPayload OpenStream()
@@ -139,6 +155,8 @@ namespace BakedFileService
                         logger.LogError(ex, $"Cannot open file {fName} for {Volume}/{Part}");
                     return retRec;
                 }
+
+                Console.WriteLine($"[Open Volume: {fName}]");
 
                 return retRec;
             }
