@@ -37,7 +37,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BakedFileService", "BakedFi
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LibProtos", "LibProtos\LibProtos.csproj", "{22AD55D5-25EC-49B5-8EE0-05D42C0D1405}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeoDokan_AssetFs", "NeoDokan_AssetFs\NeoDokan_AssetFs.csproj", "{B7D90558-25AA-4BEE-B608-CC0BA6BEF340}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeoDokan_AssetFs", "NeoDokan_AssetFs\NeoDokan_AssetFs.csproj", "{B7D90558-25AA-4BEE-B608-CC0BA6BEF340}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Assimilation", "Assimilation", "{B859D297-8402-4902-965B-CC1D0D149B74}"
+	ProjectSection(SolutionItems) = preProject
+		Assimilation\Readme.md = Assimilation\Readme.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
