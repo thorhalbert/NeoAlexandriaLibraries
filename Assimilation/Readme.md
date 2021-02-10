@@ -246,7 +246,7 @@ General frame work for extractors.
    * Tape filesystems:  DOS, RSTS/E, ANSI
  * Floppy Formats (Containers):
    * Floppy Filesystems: Amiga, FAT, DOS
- * Disk Pack Formats:
+ * Disk Pack Formats:  Tops-10/20, RSTS/E, VMS, FAT, Amiga
 
 This might have to call command line tools to operate.
 

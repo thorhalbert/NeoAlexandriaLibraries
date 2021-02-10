@@ -18,9 +18,17 @@ namespace BakedFileService
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddGrpc();
+            services.AddGrpc(options =>
+            {
+                options.EnableDetailedErrors = true;
+                options.MaxReceiveMessageSize = null; // 2 MB
+                options.MaxSendMessageSize = null; // 5 MB
+            });
+
             services.AddMemoryCache();
-            //services.AddSingleton<IVolumeCache, VolumeOpenCache>();
+            //services.AddSingleton<IVolumeCache, VolumeOpenCache
+
+           
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

@@ -82,14 +82,17 @@ namespace BakedFileService
 
             // Now if the file is gone/moved we might get an error seeking
 
-            cache.VolumeStream.Seek(request.Offset, SeekOrigin.Begin);
+            var didSeek = cache.VolumeStream.Seek(request.Offset, SeekOrigin.Begin);
+
             var length = Math.Min(BUFSIZ, request.RequestCount);
             var count = cache.VolumeStream.Read(buffer, 0, length);
+
+
 
             retRec.Length = count;  // Not sure what's efficient here - nice if we didn't have to copy
             retRec.Payload = ByteString.CopyFrom(buffer, 0, count);
 
-            Console.WriteLine($"[Read {count} bytes]");
+            Console.WriteLine($"[Read {count} bytes @{request.Offset} offset (actual={didSeek}, newpos={cache.VolumeStream.Position})");
 
             return retRec;
         }

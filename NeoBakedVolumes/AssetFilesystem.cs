@@ -10,9 +10,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
+using NeoCommon;
 
 namespace NeoBakedVolumes
 {
+
+    // "0f49f6c69d7cecf96ec362dac94745c6425c98ee"; // Hello world achieved 2021/02/09
+
     public class AssetFilesystem : IFileProvider
     {
         private IMongoDatabase db;
@@ -64,7 +68,7 @@ namespace NeoBakedVolumes
 
 namespace AssetFileSystem
 {
-    class File : IFileInfo
+    public class File : IFileInfo
     {
         private string subpath;
         private IMongoDatabase db;
@@ -100,8 +104,15 @@ namespace AssetFileSystem
 
             var vCol = db.BakedVolumes();
 
-            var volFilter = Builders<BakedVolumes>.Filter.Eq("_id", baRec.Volume);
-            volRec = vCol.FindSync(volFilter).FirstOrDefault();
+            try
+            {
+                var volFilter = Builders<BakedVolumes>.Filter.Eq("_id", baRec.Volume);
+                volRec = vCol.FindSync(volFilter).FirstOrDefault();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: ${ex.Message}");
+            }
 
             unBaker = new UnbakeContext(db, volRec, baRec);
 
@@ -144,7 +155,9 @@ namespace AssetFileSystem
             call_Block = baRec.Block;
             call_Offset = baRec.Offset;
 
-            return new GZipStream(new MakeStream(baRec, volRec, this), CompressionMode.Decompress);
+            //return new MakeStream(baRec, volRec, this);
+            //return new ICSharpCode.SharpZipLib.GZip.GZipInputStream(new MakeStream(baRec, volRec, this)); - this actually doesn't work
+            return new GZipStream(new MakeStream(baRec, volRec, this), CompressionMode.Decompress);  // This seems to work too
         }
 
         private class MakeStream : Stream
@@ -193,7 +206,8 @@ namespace AssetFileSystem
 
                 if (val.Length<=count)
                 {
-                    buffer = val.ToArray();
+                    Array.Copy(val.ToArray(), buffer, val.Length);
+                    //buffer = val.ToArray();
                     return val.Length;
                 }
 
@@ -202,7 +216,9 @@ namespace AssetFileSystem
                 var retBuf = val.Slice(0, count);
                 prevBuffer = val.Slice(count);
 
-                buffer = retBuf.ToArray();
+                Array.Copy(retBuf.ToArray(), buffer, count);
+
+                //buffer.CopyTo(retBuf);
                 return retBuf.Length;
             }
 
@@ -238,6 +254,7 @@ namespace AssetFileSystem
             public ulong remain { get; private set; }
             public ulong realLength { get; private set; }
             public ulong fileRemain { get; private set; }
+            public ulong fileRead { get; private set; }
             public ulong currentPartRemain { get; private set; }
             public int currentFileNum { get; private set; }
             public string currentPart { get; private set; }
@@ -265,6 +282,8 @@ namespace AssetFileSystem
                 realLength = baRec.RealLength;
                 fileRemain = realLength;
 
+                fileRead = 0;
+
                 // Part Info (the piece of the archive we're reading)
 
                 currentPartRemain = volumelength - offsetx;
@@ -277,7 +296,12 @@ namespace AssetFileSystem
             public ReadOnlyMemory<byte> ReadNextBlock(uint size=0)
             {
                 // Figure out what system our primary connector is on
-                var channel = GrpcChannel.ForAddress("http://feanor:5000");
+                var channel = GrpcChannel.ForAddress("http://feanor:5000",
+                                    new GrpcChannelOptions
+                                    {
+                                        MaxReceiveMessageSize =null, // 5 MB
+                                        MaxSendMessageSize = null // 2 MB
+                                    });
                 assetClient = new BakedVolumeData.BakedVolumeDataClient(channel);
 
                 if (fileRemain < 1)
@@ -295,6 +319,9 @@ namespace AssetFileSystem
                     currentPart = Convert.ToChar(currentFileNum + 65).ToString();  // File 0=A
                 }
 
+                if (size > fileRemain)
+                    size = (uint) fileRemain;
+
                 // These files are guaranteed to be under 32 bits in length
                 var returnVal = assetClient.Fetch(new FetchRequest()
                 {
@@ -304,23 +331,40 @@ namespace AssetFileSystem
                     RequestCount = (int) size,
                 });
 
+                var length = returnVal.Length;
+                fileRead += (ulong) length;
+
+                //var dump = Utils.HexDump(returnVal.Payload.ToByteArray());
+                //Console.WriteLine(dump);
+
+                Console.WriteLine($"Read: Part {currentFileNum}, Length {length} Read {fileRead} Remain {currentPartRemain} ");
+
+                //using(var f = new BinaryWriter(System.IO.File.OpenWrite("test.gz")))
+                //{
+                //    f.Write(returnVal.Payload.ToByteArray());
+                //}
+
                 // Set variables for next time
 
-                var  length = returnVal.Length;
+             
                 fileRemain -= (ulong) length;
+                offsetx += (ulong) length;
 
                 currentPartRemain -= (ulong) length;
 
                 // See if we're spanning parts
                 if (currentPartRemain < 1)
                 {
-                    currentFileNum++;
+                    FileNum++;
+
+                    Console.WriteLine($"[Proceed to next file {FileNum}]");
+
                     offsetx = 0;   // Start at beginning of next file
 
-                    currentPartRemain = volumelength;
+                    currentPartRemain = Math.Min(volumelength, realLength - fileRead);
                 }
 
-                return returnVal.Payload.Memory;
+                return returnVal.Payload.Memory.Slice(0,length);
             }
 
 

@@ -5,12 +5,14 @@ using NeoAssets.Mongo;
 using NeoBakedVolumes.Mongo;
 using Grpc.Net.Client;
 using BakedFileService.Protos;
+using System.Security.Cryptography;
+using System.Linq;
 
 namespace Tester
 {
-    class Progra
+    class Program
     {
-        static async System.Threading.Tasks.Task Main(string[] args)
+        static int  Main(string[] args)
         {
             var conn = Environment.GetEnvironmentVariable("MONGO_URI");
             var Connection = new MongoClient(conn);
@@ -18,6 +20,7 @@ namespace Tester
             var NeoDb = Connection.GetDatabase("NeoAlexandria");
 
             var asset = NeoDb.GetCollection<BakedVolumes>("BakedVolumes");
+            var bac = NeoDb.GetCollection<BakedAssets>("BakedAssets");
 
             var filter = Builders<BakedVolumes>.Filter.Empty;
 
@@ -33,22 +36,45 @@ namespace Tester
 
             // Call Baked Asset server and get a record
 
-            var channel = GrpcChannel.ForAddress("http://feanor:5000");
-            var assetClient = new BakedVolumeData.BakedVolumeDataClient(channel);
+            //var channel = GrpcChannel.ForAddress("http://feanor:5000");
+            //var assetClient = new BakedVolumeData.BakedVolumeDataClient(channel);
 
-            var st = DateTime.Now;
+            //var st = DateTime.Now;
 
-            var ret = assetClient.Fetch(new FetchRequest
+            //var ret = assetClient.Fetch(new FetchRequest
+            //{
+            //    BakedVolume = "NEO_ASSETS_00001",
+            //    Part = "A",
+            //    Offset = 0,
+            //    RequestCount = 1024 * 1024
+            //});
+
+            //var tm = DateTime.Now - st;
+
+            //var startHash = "0f49f6c69d7cecf96ec362dac94745c6425c98ee"; // Hello world achieved 2021/02/09
+            var startHash = "4146c29c78049b34c8b4196eb406743ce5f6eeec"; // Should be split across volumes (and is very big)- success
+
+             var f = new AssetFileSystem.File(startHash, NeoDb, bac);
+            
+            var str = f.CreateReadStream();
+
+            // Tap the stream so we can get a hash on it.
+            //var hashStr = new NeoCommon.HashStream(str, HashAlgorithm.Create("SHA1"));
+
+            var buf = new Byte[32*1024*1024];
+
+            while (true)
             {
-                BakedVolume = "NEO_ASSETS_00001",
-                Part = "A",
-                Offset = 0,
-                RequestCount = 1024 * 1024
-            });
+                var len = str.Read(buf, 0, buf.Length);
+                if (len < 1)
+                    break;
+            }
 
-            var tm = DateTime.Now - st;
+            //var hash = string.Concat(hashStr.Hash().Select(x => x.ToString("x2")));
+            //if (startHash != hash)
+            //    Console.WriteLine("Hashes don't match");
 
-
+            return 0;
         }
     }
 }

@@ -11,7 +11,6 @@
     <PackageReference Include="MongoDB.Bson" Version="2.11.6" />
     <PackageReference Include="MongoDB.Driver" Version="2.11.6" />
     <PackageReference Include="MongoDB.Driver.Core" Version="2.11.6" />
-    <PackageReference Include="MongoDB.Libmongocrypt" Version="1.2.0" />
   </ItemGroup>
 
 </Project>
