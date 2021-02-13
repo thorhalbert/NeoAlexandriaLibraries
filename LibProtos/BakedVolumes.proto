@@ -26,3 +26,11 @@ message FetchPayload {
    int32 Length = 4;  // Probably redundant
    bool PoolMoved = 5; // Got an error and tracked it down - invalidate your cache
 }
+
+
+// It would have been interesting in setting this up as a server stream
+// It might have dealt with the state problem, though you'd only stream
+// what remains of each part, since another server might have the next part.
+
+// I ended up getting this to be pretty high performance - 880 mb in 20 seconds
+// with 4mb buffers.    Still pure file upload/download should be a stream.

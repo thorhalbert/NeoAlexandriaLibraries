@@ -81,8 +81,8 @@ namespace AssetFileSystem
 
         internal static BakedVolumeData.BakedVolumeDataClient assetClient;
 
-        ulong real_position = 0;
-        ulong decomp_position = 0;
+        //ulong real_position = 0;
+        //ulong decomp_position = 0;
 
         public File(string subpath, IMongoDatabase db, IMongoCollection<BakedAssets> bac)
         {
@@ -134,10 +134,10 @@ namespace AssetFileSystem
         public bool IsDirectory => false;
 
         private string call_Volume;
-        private string call_Part;
+        //private string call_Part;
         private uint call_Block;
         private uint call_Offset;
-        private DeflateStream call_Deflate;
+        //private DeflateStream call_Deflate;
 
 
 
