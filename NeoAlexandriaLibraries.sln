@@ -38,7 +38,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BakedFileService", "BakedFi
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LibProtos", "LibProtos\LibProtos.csproj", "{22AD55D5-25EC-49B5-8EE0-05D42C0D1405}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeoDokan_AssetFs", "NeoDokan_AssetFs\NeoDokan_AssetFs.csproj", "{B7D90558-25AA-4BEE-B608-CC0BA6BEF340}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Windows_DokanFilesystem", "NeoDokan_AssetFs\Windows_DokanFilesystem.csproj", "{B7D90558-25AA-4BEE-B608-CC0BA6BEF340}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Assimilation", "Assimilation", "{B859D297-8402-4902-965B-CC1D0D149B74}"
 	ProjectSection(SolutionItems) = preProject
@@ -46,6 +46,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Assimilation", "Assimilatio
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WebDav Server", "WebDav Server", "{C1A0688D-5B92-40EC-B3D7-94081F035FAB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Linux_FuseFilesystem", "Linux_FuseFilesystem\Linux_FuseFilesystem.csproj", "{72C51EC3-5BCB-4D0B-8A9C-FA90EEEE947C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Filesystems", "Filesystems", "{B5D48FB0-7D73-4108-B804-A3354BB4DC20}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tmds.Fuse", "Tmds.Fuse-master\src\Tmds.Fuse\Tmds.Fuse.csproj", "{42BBB645-4BDB-4583-9492-E2D8A341DD68}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -101,9 +107,22 @@ Global
 		{B7D90558-25AA-4BEE-B608-CC0BA6BEF340}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B7D90558-25AA-4BEE-B608-CC0BA6BEF340}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B7D90558-25AA-4BEE-B608-CC0BA6BEF340}.Release|Any CPU.Build.0 = Release|Any CPU
+		{72C51EC3-5BCB-4D0B-8A9C-FA90EEEE947C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{72C51EC3-5BCB-4D0B-8A9C-FA90EEEE947C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{72C51EC3-5BCB-4D0B-8A9C-FA90EEEE947C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{72C51EC3-5BCB-4D0B-8A9C-FA90EEEE947C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{42BBB645-4BDB-4583-9492-E2D8A341DD68}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{42BBB645-4BDB-4583-9492-E2D8A341DD68}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{42BBB645-4BDB-4583-9492-E2D8A341DD68}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{42BBB645-4BDB-4583-9492-E2D8A341DD68}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{B7D90558-25AA-4BEE-B608-CC0BA6BEF340} = {B5D48FB0-7D73-4108-B804-A3354BB4DC20}
+		{72C51EC3-5BCB-4D0B-8A9C-FA90EEEE947C} = {B5D48FB0-7D73-4108-B804-A3354BB4DC20}
+		{42BBB645-4BDB-4583-9492-E2D8A341DD68} = {B5D48FB0-7D73-4108-B804-A3354BB4DC20}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {9E8FBEA0-7638-46EE-86E0-1826B23978C5}

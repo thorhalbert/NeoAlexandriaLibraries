@@ -31,6 +31,9 @@ namespace NeoBakedVolumes.Mongo
         [BsonIgnoreIfNull] public bool? Offline { get; set; }   // 2/60
         [BsonIgnoreIfNull] public bool? ZPool { get; set; } // 2/60
 
+        [BsonIgnoreIfNull] public string BakedServerPrimary { get;set;}
+        [BsonIgnoreIfNull] public string BakedServerSecondary { get; set; }
+
         [BsonExtraElements] public BsonDocument _CatchAll { get; set; }
     }
     public class BakedPools_Mounts
