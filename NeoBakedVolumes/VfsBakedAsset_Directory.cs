@@ -13,61 +13,58 @@ namespace NeoBakedVolumes
         private VfsBakedAssets vfsBakedAssets;
         private IVfsPath path;
 
-        private IVfsCommon com;
+    
 
         public VfsBakedAsset_Directory(IMongoDatabase db, IMongoCollection<Mongo.BakedAssets> bac, VfsBakedAssets vfsBakedAssets, IVfsPath path)
         {
             this.db = db;
             this.vfsBakedAssets = vfsBakedAssets;
             this.path = path;
+
+          
         }
 
         IVfsPath IVfsCommon.Path { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
         internal void _attachCom(VfsBakedAsset_Common com)
         {
-            this.com = com;
+            throw new NotImplementedException();
         }
 
         stat IVfsCommon.stat { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         bool IVfsCommon.FileSystemReadOnly { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
-        int IVfsCommon.Access(IVfsPath path, mode_t mode)
+        int IVfsCommon.Access(mode_t mode)
         {
             throw new NotImplementedException();
         }
 
-        int IVfsCommon.ChMod(IVfsPath path, mode_t mode, IVfsCommon fiRef)
+        int IVfsCommon.Chown(uint uid, uint gid)
         {
             throw new NotImplementedException();
         }
 
-        int IVfsCommon.Chown(IVfsPath path, uint uid, uint gid, IVfsCommon fiRef)
+        int IVfsCommon.FAllocate(int mode, ulong offset, long length)
         {
             throw new NotImplementedException();
         }
 
-        int IVfsCommon.FAllocate(IVfsPath path, int mode, ulong offset, long length, ref IVfsCommon fi)
+        int IVfsCommon.Flush(ref IVfsCommon fi)
         {
             throw new NotImplementedException();
         }
 
-        int IVfsCommon.Flush(IVfsPath path, ref IVfsCommon fi)
+        int IVfsCommon.FSync(ref IVfsCommon fi)
         {
             throw new NotImplementedException();
         }
 
-        int IVfsCommon.FSync(IVfsPath path, ref IVfsCommon fi)
+        int IVfsDirectoryInfo.FSyncDir(IVfsPath readOnlySpan, bool onlyData)
         {
             throw new NotImplementedException();
         }
 
-        int IVfsDirectoryInfo.FSyncDir(IVfsPath readOnlySpan, bool onlyData, ref IVfsDirectoryInfo fi)
-        {
-            throw new NotImplementedException();
-        }
-
-        int IVfsCommon.GetAttr(IVfsPath path, ref stat stat, IVfsCommon fiRef)
+        int IVfsCommon.GetAttr(ref stat stat)
         {
             throw new NotImplementedException();
         }
@@ -82,77 +79,72 @@ namespace NeoBakedVolumes
             throw new NotImplementedException();
         }
 
-        int IVfsCommon.GetXAttr(IVfsPath path, ReadOnlySpan<byte> name, Span<byte> data)
+        int IVfsCommon.GetXAttr(ReadOnlySpan<byte> name, Span<byte> data)
         {
             throw new NotImplementedException();
         }
 
-        int IVfsCommon.Link(IVfsPath fromPath, IVfsPath toPath)
+        int IVfsCommon.Link(IVfsPath toPath)
         {
             throw new NotImplementedException();
         }
 
-        int IVfsCommon.ListXAttr(IVfsPath path, Span<byte> list)
+        int IVfsCommon.ListXAttr(Span<byte> list)
         {
             throw new NotImplementedException();
         }
 
-        int IVfsDirectoryInfo.MkDir(IVfsPath path, mode_t mode)
+        int IVfsDirectoryInfo.MkDir(mode_t mode)
         {
             throw new NotImplementedException();
         }
 
-        int IVfsDirectoryInfo.OpenDir(IVfsPath path, ref IVfsDirectoryInfo fi)
+        int IVfsDirectoryInfo.OpenDir()
         {
             throw new NotImplementedException();
         }
 
-        int IVfsDirectoryInfo.ReadDir(IVfsPath path, ulong offset, ref IVfsDirectoryInfo fi)
+        int IVfsDirectoryInfo.ReadDir(ulong offset)
         {
             throw new NotImplementedException();
         }
 
-        int IVfsCommon.ReadLink(IVfsPath path, Span<byte> buffer)
+        int IVfsCommon.ReadLink(Span<byte> buffer)
         {
             throw new NotImplementedException();
         }
 
-        int IVfsDirectoryInfo.ReleaseDir(IVfsPath path, ref IVfsDirectoryInfo fi)
+        int IVfsDirectoryInfo.ReleaseDir()
         {
             throw new NotImplementedException();
         }
 
-        int IVfsCommon.RemoveXAttr(IVfsPath path, ReadOnlySpan<byte> name)
+        int IVfsCommon.RemoveXAttr(ReadOnlySpan<byte> name)
         {
             throw new NotImplementedException();
         }
 
-        int IVfsCommon.Rename(IVfsPath path, IVfsPath newPath, int flags)
+        int IVfsCommon.Rename(IVfsPath newPath, int flags)
         {
             throw new NotImplementedException();
         }
 
-        int IVfsDirectoryInfo.RmDir(IVfsPath path)
+        int IVfsDirectoryInfo.RmDir()
         {
             throw new NotImplementedException();
         }
 
-        int IVfsCommon.SetXAttr(IVfsPath path, ReadOnlySpan<byte> name, ReadOnlySpan<byte> data, int flags)
+        int IVfsCommon.SymLink(IVfsPath target)
         {
             throw new NotImplementedException();
         }
 
-        int IVfsCommon.SymLink(IVfsPath path, IVfsPath target)
+        int IVfsCommon.Unlink()
         {
             throw new NotImplementedException();
         }
 
-        int IVfsCommon.Unlink(IVfsPath path)
-        {
-            throw new NotImplementedException();
-        }
-
-        int IVfsCommon.UpdateTimestamps(IVfsPath path, ref timespec atime, ref timespec mtime, IVfsCommon fiRef)
+        int IVfsCommon.UpdateTimestamps(ref timespec atime, ref timespec mtime)
         {
             throw new NotImplementedException();
         }

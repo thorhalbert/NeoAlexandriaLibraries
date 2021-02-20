@@ -31,6 +31,6 @@ namespace NeoCommon.VfsInterfaces
         IVfsFileInfo FileInfo(IVfsPath path);
 
 
-        int StatFS(IVfsPath path, ref statvfs statfs);
+        int StatFS(IVfsPath path);
     }
 }

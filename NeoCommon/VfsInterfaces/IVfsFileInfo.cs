@@ -7,8 +7,8 @@ namespace NeoCommon.VfsInterfaces
     {
         IVfsPath Filename { get; set; }
 
-        int Open(IVfsPath path, ref IVfsFileInfo fi);
-        void Release(IVfsPath path, ref IVfsFileInfo fi);
+        int Open(IVfsPath path);
+        void Release(IVfsPath path);
 
         /// <summary>
         /// Seekability appearently is a private concern of this method (if offset rewinds then it may need
@@ -19,9 +19,9 @@ namespace NeoCommon.VfsInterfaces
         /// <param name="buffer"></param>
         /// <param name="fi"></param>
         /// <returns></returns>        
-        int Read(IVfsPath path, ulong offset, Span<byte> buffer, ref IVfsFileInfo fi);
-        int Create(IVfsPath path, mode_t mode, ref IVfsFileInfo fi);
-        int Truncate(IVfsPath path, ulong length, IVfsFileInfo fiRef);
-        int Write(IVfsPath path, ulong offset, ReadOnlySpan<byte> buffer, ref IVfsFileInfo fi);
+        int Read(IVfsPath path, ulong offset, Span<byte> buffer);
+        int Create(IVfsPath path, mode_t mode);
+        int Truncate(IVfsPath path, ulong length);
+        int Write(IVfsPath path, ulong offset, ReadOnlySpan<byte> buffer);
     }
 }

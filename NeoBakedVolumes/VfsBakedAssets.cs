@@ -38,7 +38,7 @@ namespace NeoBakedVolumes
             return file;
         }
 
-        int IVfsFilesystem.StatFS(IVfsPath path, ref statvfs statfs)
+        int IVfsFilesystem.StatFS(IVfsPath path)
         {
             throw new NotImplementedException();
         }
