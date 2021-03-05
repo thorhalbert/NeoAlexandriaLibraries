@@ -6,17 +6,51 @@ using Tmds.Linux;
 
 namespace Linux_FuseFilesystem
 {
+    struct MountPoint
+    {
+        public byte[] Name;
+        public byte[] MountFrom;
+        public byte[] MountTo;
+        public FuseMountableBase fuse;
+
+        public MountPoint(ReadOnlySpan<byte> name, ReadOnlySpan<byte> mountFrom, ReadOnlySpan<byte> mountTo, FuseMountableBase fmb)
+        {
+            Name = name.ToArray();
+            MountFrom = mountFrom.ToArray();
+            MountTo = mountTo.ToArray();
+            fuse = fmb;
+
+            cleanPoint(MountFrom);
+            cleanPoint(MountTo);
+        }
+      
+
+        internal void Remount(ReadOnlySpan<byte> mountFrom, ReadOnlySpan<byte> mountTo, FuseMountableBase fsys)
+        {
+            MountFrom = mountFrom.ToArray();
+            MountTo = mountTo.ToArray();
+            fuse = fsys;   // We may need to dispose of fmb more elegantly
+
+            cleanPoint(MountFrom);
+            cleanPoint(MountTo);
+        }
+
+        internal void cleanPoint(byte[] inMount)
+        {
+            return;
+        }
+    }
     /// <summary>
     /// Overlay/Union Dispatch Filesystem Layer 
     //  Various filesystems are 'mounted' here and then based on the path they get dispatched to whichever 
     //  nested layer that has been mounted underneath
-    /// </summary>
-    class NarpMirror_MountDispatch : FuseMountableBase
+    /// </summary>  
+    class NarpMirror_MountDispatch : FuseFileSystemBase
     {
         // dispatch 
-        Dictionary<byte[], KeyValuePair<byte[], FuseFileSystemBase>> mapSys = new Dictionary<byte[], KeyValuePair<byte[], FuseFileSystemBase>>();
+        Dictionary<byte[], MountPoint> mapSys = new Dictionary<byte[], MountPoint>();
 
-        Dictionary<byte[], byte[][]> fromCache = new Dictionary<byte[], byte[][]>();
+  
 
         // It is assumed that these mountpoints are already normalized
         /// <summary>
@@ -40,19 +74,28 @@ namespace Linux_FuseFilesystem
         /// <param name="fsys">
         /// The lower level FuseFileSystemBase that this mount point will dispatch to
         /// </param>
-        public void Mount(ReadOnlySpan<byte> mountFrom, ReadOnlySpan<byte> mountTo, FuseFileSystemBase fsys)
+        public void Mount(ReadOnlySpan<byte> name, ReadOnlySpan<byte> mountFrom, ReadOnlySpan<byte> mountTo, FuseMountableBase fsys)
         {
-            var mountPoint = new KeyValuePair<byte[], FuseFileSystemBase>(mountTo.ToArray(), fsys);
-            mapSys.Add(mountFrom.ToArray(), mountPoint);
+            var n = name.ToArray();
+                 
+            // See if the mountpoint changed - maybe just need to update mountTo
+            if (mapSys.ContainsKey(n))
+            {
+                var map = mapSys[n];
+                map.Remount(mountFrom, mountTo, fsys);
+                return;
+            }
 
-            // Need split algorithm 
-            //var splits = mountFrom.Split('/');
+            var mountPoint = new MountPoint(name, mountFrom, mountTo, fsys);
+            mapSys.Add(mountPoint.Name, mountPoint);
         }
         public ReadOnlySpan<byte> DispatchOn(ReadOnlySpan<byte> path, out FuseFileSystemBase fsys)
         {
             fsys = this;
 
-            path = base.TransformPath(path);
+            // Normalize the path (remove ..) - expensive
+            // Find quick way to match the lhs of our path to the mountlist - something better than brute force
+            //    -- remove the lhs, prepend the rhs
 
             return path;
         }
