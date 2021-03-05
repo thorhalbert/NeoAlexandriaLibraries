@@ -17,6 +17,7 @@
     <PackageReference Include="Microsoft.Extensions.FileProviders.Abstractions" Version="5.0.0" />
     <PackageReference Include="Mono.Posix.NETStandard" Version="1.0.0" />
     <PackageReference Include="rm.Trie" Version="1.1.0" />
+    <PackageReference Include="TrieNet.Core" Version="1.0.4" />
   </ItemGroup>
 
   <ItemGroup>
