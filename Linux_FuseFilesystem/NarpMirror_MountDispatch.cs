@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Gma.DataStructures.StringSearch;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Tmds.Fuse;
@@ -50,7 +51,8 @@ namespace Linux_FuseFilesystem
         // dispatch 
         Dictionary<byte[], MountPoint> mapSys = new Dictionary<byte[], MountPoint>();
 
-  
+        Trie<byte> FastPrefix = new Trie<byte>();
+        
 
         // It is assumed that these mountpoints are already normalized
         /// <summary>
@@ -88,6 +90,9 @@ namespace Linux_FuseFilesystem
 
             var mountPoint = new MountPoint(name, mountFrom, mountTo, fsys);
             mapSys.Add(mountPoint.Name, mountPoint);
+
+         
+
         }
         public ReadOnlySpan<byte> DispatchOn(ReadOnlySpan<byte> path, out FuseFileSystemBase fsys)
         {
