@@ -1,11 +1,12 @@
 ﻿using MongoDB.Driver;
 using NeoCommon.VfsInterfaces;
 using System;
+using System.Runtime.CompilerServices;
 using Tmds.Linux;
 
 namespace NeoBakedVolumes
 {
-    internal class VfsBakedAsset_FileInfo : IVfsFileInfo
+    public class VfsBakedAsset_FileInfo : IVfsFileInfo
     {
         private IMongoDatabase db;
         private VfsBakedAssets vfsBakedAssets;
@@ -21,118 +22,129 @@ namespace NeoBakedVolumes
         }
 
         IVfsPath IVfsFileInfo.Filename { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        IVfsPath IVfsCommon.Path { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        stat IVfsCommon.stat { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        bool IVfsCommon.FileSystemReadOnly { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-
+     
         internal void _attachCom(VfsBakedAsset_Common com)
         {
             throw new NotImplementedException();
         }
 
-        int IVfsCommon.Access(mode_t mode)
+        public stat stat { get => com.stat; set => com.stat = value; }
+        public bool FileSystemReadOnly { get => com.FileSystemReadOnly; set => com.FileSystemReadOnly = value; }
+        IVfsPath IVfsCommon.Path { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        public int fd { get; private set; }
+
+        public int Access(mode_t mode)
         {
-            throw new NotImplementedException();
+            return com.Access(mode);
         }
 
-        int IVfsCommon.Chown(uint uid, uint gid)
+        public int Chown(uint uid, uint gid)
         {
-            throw new NotImplementedException();
+            return com.Chown(uid, gid);
         }
 
-        int IVfsFileInfo.Create(IVfsPath path, mode_t mode)
+        public int FAllocate(int mode, ulong offset, long length)
         {
-            throw new NotImplementedException();
+            return com.FAllocate(mode, offset, length);
         }
 
-        int IVfsCommon.FAllocate(int mode, ulong offset, long length)
+        public int Flush(ref IVfsCommon fi)
         {
-            throw new NotImplementedException();
+            return com.Flush(ref fi);
         }
 
-        int IVfsCommon.Flush(ref IVfsCommon fi)
+        public int FSync(ref IVfsCommon fi)
         {
-            throw new NotImplementedException();
+            return com.FSync(ref fi);
         }
 
-        int IVfsCommon.FSync(ref IVfsCommon fi)
+        public int GetAttr(ref stat stat)
         {
-            throw new NotImplementedException();
+            return com.GetAttr(ref stat);
         }
 
-        int IVfsCommon.GetAttr(ref stat stat)
+        public int GetXAttr(ReadOnlySpan<byte> name, Span<byte> data)
         {
-            throw new NotImplementedException();
+            return com.GetXAttr(name, data);
         }
 
-        int IVfsCommon.GetXAttr(ReadOnlySpan<byte> name, Span<byte> data)
+        public int Link(IVfsPath toPath)
         {
-            throw new NotImplementedException();
+            return com.Link(toPath);
         }
 
-        int IVfsCommon.Link(IVfsPath toPath)
+        public int ListXAttr(Span<byte> list)
         {
-            throw new NotImplementedException();
+            return com.ListXAttr(list);
         }
 
-        int IVfsCommon.ListXAttr(Span<byte> list)
+        public int ReadLink(Span<byte> buffer)
         {
-            throw new NotImplementedException();
+            return com.ReadLink(buffer);
         }
 
-        int IVfsFileInfo.Open(IVfsPath path)
+        public int RemoveXAttr(ReadOnlySpan<byte> name)
         {
-            throw new NotImplementedException();
+            return com.RemoveXAttr(name);
         }
 
-        int IVfsFileInfo.Read(IVfsPath path, ulong offset, Span<byte> buffer)
+        public int Rename(IVfsPath newPath, int flags)
         {
-            throw new NotImplementedException();
+            return com.Rename(newPath, flags);
         }
 
-        int IVfsCommon.ReadLink(Span<byte> buffer)
+        public int SymLink(IVfsPath target)
         {
-            throw new NotImplementedException();
+            return com.SymLink(target);
         }
 
-        void IVfsFileInfo.Release(IVfsPath path)
+        public int Unlink()
         {
-            throw new NotImplementedException();
+            return com.Unlink();
         }
 
-        int IVfsCommon.RemoveXAttr(ReadOnlySpan<byte> name)
+        public int UpdateTimestamps(ref timespec atime, ref timespec mtime)
         {
-            throw new NotImplementedException();
+            return com.UpdateTimestamps(ref atime, ref mtime);
         }
 
-        int IVfsCommon.Rename(IVfsPath newPath, int flags)
+        int IVfsFileInfo.Open()
         {
-            throw new NotImplementedException();
+            var f = Wrap_LibC.Open(path, 0);
+            if (f < 0)
+                return f;
+
+            fd = f;
+            return f;
         }
 
-        int IVfsCommon.SymLink(IVfsPath target)
+        void IVfsFileInfo.Release()
         {
-            throw new NotImplementedException();
+            if (fd != -1)
+                LibC.close(fd);
+            fd = -1;
         }
 
-        int IVfsFileInfo.Truncate(IVfsPath path, ulong length)
+        int IVfsFileInfo.Read(ulong offset, Span<byte> buffer)
         {
-            throw new NotImplementedException();
+            return Wrap_LibC.Read(fd, offset, buffer);
         }
 
-        int IVfsCommon.Unlink()
+        int IVfsFileInfo.Create(mode_t mode)
         {
-            throw new NotImplementedException();
+            return -LibC.EACCES;
         }
 
-        int IVfsCommon.UpdateTimestamps(ref timespec atime, ref timespec mtime)
+        int IVfsFileInfo.Truncate(ulong length)
         {
-            throw new NotImplementedException();
+            return -LibC.EACCES;
+
         }
 
-        int IVfsFileInfo.Write(IVfsPath path, ulong offset, ReadOnlySpan<byte> buffer)
+        int IVfsFileInfo.Write(ulong offset, ReadOnlySpan<byte> buffer)
         {
-            throw new NotImplementedException();
+            return -LibC.EACCES;
+
         }
     }
 }

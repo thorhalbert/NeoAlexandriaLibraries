@@ -13,6 +13,7 @@ namespace NeoBakedVolumes
         private VfsBakedAssets vfsBakedAssets;
         private IVfsPath path;
 
+        IVfsCommon com;
     
 
         public VfsBakedAsset_Directory(IMongoDatabase db, IMongoCollection<Mongo.BakedAssets> bac, VfsBakedAssets vfsBakedAssets, IVfsPath path)
@@ -28,33 +29,98 @@ namespace NeoBakedVolumes
 
         internal void _attachCom(VfsBakedAsset_Common com)
         {
-            throw new NotImplementedException();
+            this.com = com;
         }
 
-        stat IVfsCommon.stat { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        bool IVfsCommon.FileSystemReadOnly { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        public stat stat { get => com.stat; set => com.stat = value; }
+        public bool FileSystemReadOnly { get => com.FileSystemReadOnly; set => com.FileSystemReadOnly = value; }
 
-        int IVfsCommon.Access(mode_t mode)
+        public int Access(mode_t mode)
+        {
+            return com.Access(mode);
+        }
+
+        public int Chown(uint uid, uint gid)
+        {
+            return com.Chown(uid, gid);
+        }
+
+        public int FAllocate(int mode, ulong offset, long length)
+        {
+            return com.FAllocate(mode, offset, length);
+        }
+
+        public int Flush(ref IVfsCommon fi)
+        {
+            return com.Flush(ref fi);
+        }
+
+        public int FSync(ref IVfsCommon fi)
+        {
+            return com.FSync(ref fi);
+        }
+
+        public int GetAttr(ref stat stat)
+        {
+            return com.GetAttr(ref stat);
+        }
+
+        public int GetXAttr(ReadOnlySpan<byte> name, Span<byte> data)
+        {
+            return com.GetXAttr(name, data);
+        }
+
+        public int Link(IVfsPath toPath)
+        {
+            return com.Link(toPath);
+        }
+
+        public int ListXAttr(Span<byte> list)
+        {
+            return com.ListXAttr(list);
+        }
+
+        public int ReadLink(Span<byte> buffer)
+        {
+            return com.ReadLink(buffer);
+        }
+
+        public int RemoveXAttr(ReadOnlySpan<byte> name)
+        {
+            return com.RemoveXAttr(name);
+        }
+
+        public int Rename(IVfsPath newPath, int flags)
+        {
+            return com.Rename(newPath, flags);
+        }
+
+        public int SymLink(IVfsPath target)
+        {
+            return com.SymLink(target);
+        }
+
+        public int Unlink()
+        {
+            return com.Unlink();
+        }
+
+        public int UpdateTimestamps(ref timespec atime, ref timespec mtime)
+        {
+            return com.UpdateTimestamps(ref atime, ref mtime);
+        }
+
+        int IVfsDirectoryInfo.ReadDir(ulong offset)
         {
             throw new NotImplementedException();
         }
 
-        int IVfsCommon.Chown(uint uid, uint gid)
+        int IVfsDirectoryInfo.OpenDir()
         {
             throw new NotImplementedException();
         }
 
-        int IVfsCommon.FAllocate(int mode, ulong offset, long length)
-        {
-            throw new NotImplementedException();
-        }
-
-        int IVfsCommon.Flush(ref IVfsCommon fi)
-        {
-            throw new NotImplementedException();
-        }
-
-        int IVfsCommon.FSync(ref IVfsCommon fi)
+        int IVfsDirectoryInfo.ReleaseDir()
         {
             throw new NotImplementedException();
         }
@@ -64,7 +130,12 @@ namespace NeoBakedVolumes
             throw new NotImplementedException();
         }
 
-        int IVfsCommon.GetAttr(ref stat stat)
+        int IVfsDirectoryInfo.RmDir()
+        {
+            throw new NotImplementedException();
+        }
+
+        int IVfsDirectoryInfo.MkDir(mode_t mode)
         {
             throw new NotImplementedException();
         }
@@ -75,76 +146,6 @@ namespace NeoBakedVolumes
         }
 
         IEnumerator IEnumerable.GetEnumerator()
-        {
-            throw new NotImplementedException();
-        }
-
-        int IVfsCommon.GetXAttr(ReadOnlySpan<byte> name, Span<byte> data)
-        {
-            throw new NotImplementedException();
-        }
-
-        int IVfsCommon.Link(IVfsPath toPath)
-        {
-            throw new NotImplementedException();
-        }
-
-        int IVfsCommon.ListXAttr(Span<byte> list)
-        {
-            throw new NotImplementedException();
-        }
-
-        int IVfsDirectoryInfo.MkDir(mode_t mode)
-        {
-            throw new NotImplementedException();
-        }
-
-        int IVfsDirectoryInfo.OpenDir()
-        {
-            throw new NotImplementedException();
-        }
-
-        int IVfsDirectoryInfo.ReadDir(ulong offset)
-        {
-            throw new NotImplementedException();
-        }
-
-        int IVfsCommon.ReadLink(Span<byte> buffer)
-        {
-            throw new NotImplementedException();
-        }
-
-        int IVfsDirectoryInfo.ReleaseDir()
-        {
-            throw new NotImplementedException();
-        }
-
-        int IVfsCommon.RemoveXAttr(ReadOnlySpan<byte> name)
-        {
-            throw new NotImplementedException();
-        }
-
-        int IVfsCommon.Rename(IVfsPath newPath, int flags)
-        {
-            throw new NotImplementedException();
-        }
-
-        int IVfsDirectoryInfo.RmDir()
-        {
-            throw new NotImplementedException();
-        }
-
-        int IVfsCommon.SymLink(IVfsPath target)
-        {
-            throw new NotImplementedException();
-        }
-
-        int IVfsCommon.Unlink()
-        {
-            throw new NotImplementedException();
-        }
-
-        int IVfsCommon.UpdateTimestamps(ref timespec atime, ref timespec mtime)
         {
             throw new NotImplementedException();
         }

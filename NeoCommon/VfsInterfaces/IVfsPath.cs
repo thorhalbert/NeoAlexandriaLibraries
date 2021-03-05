@@ -6,6 +6,6 @@ namespace NeoCommon.VfsInterfaces
 {
     public interface IVfsPath
     {
-        
+        unsafe byte* toNullTerm();
     }
 }

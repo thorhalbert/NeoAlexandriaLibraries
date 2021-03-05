@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net5.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Linux_FuseFilesystem\Linux_FuseFilesystem.csproj" />
+    <ProjectReference Include="..\Tmds.Fuse-master\src\Tmds.Fuse\Tmds.Fuse.csproj" />
+  </ItemGroup>
+
+</Project>

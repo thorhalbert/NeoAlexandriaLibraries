@@ -8,7 +8,7 @@ using Tmds.Linux;
 
 namespace NeoBakedVolumes
 {
-    class VfsBakedAssets : IVfsFilesystem
+    public class VfsBakedAssets : IVfsFilesystem
     {
 
         private IMongoDatabase db;

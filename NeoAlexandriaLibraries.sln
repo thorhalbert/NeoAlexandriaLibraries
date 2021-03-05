@@ -47,11 +47,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Assimilation", "Assimilatio
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WebDav Server", "WebDav Server", "{C1A0688D-5B92-40EC-B3D7-94081F035FAB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Linux_FuseFilesystem", "Linux_FuseFilesystem\Linux_FuseFilesystem.csproj", "{72C51EC3-5BCB-4D0B-8A9C-FA90EEEE947C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Linux_FuseFilesystem", "Linux_FuseFilesystem\Linux_FuseFilesystem.csproj", "{72C51EC3-5BCB-4D0B-8A9C-FA90EEEE947C}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Filesystems", "Filesystems", "{B5D48FB0-7D73-4108-B804-A3354BB4DC20}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tmds.Fuse", "Tmds.Fuse-master\src\Tmds.Fuse\Tmds.Fuse.csproj", "{42BBB645-4BDB-4583-9492-E2D8A341DD68}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestLibC", "TestLibC\TestLibC.csproj", "{040A7873-0A00-4853-AFA4-BB0F441B8EEE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeoFS", "NeoFS\NeoFS.csproj", "{EBD0ADB2-FF9A-4E49-99B9-EBE7CB186399}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -115,6 +119,14 @@ Global
 		{42BBB645-4BDB-4583-9492-E2D8A341DD68}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{42BBB645-4BDB-4583-9492-E2D8A341DD68}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{42BBB645-4BDB-4583-9492-E2D8A341DD68}.Release|Any CPU.Build.0 = Release|Any CPU
+		{040A7873-0A00-4853-AFA4-BB0F441B8EEE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{040A7873-0A00-4853-AFA4-BB0F441B8EEE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{040A7873-0A00-4853-AFA4-BB0F441B8EEE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{040A7873-0A00-4853-AFA4-BB0F441B8EEE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EBD0ADB2-FF9A-4E49-99B9-EBE7CB186399}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EBD0ADB2-FF9A-4E49-99B9-EBE7CB186399}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EBD0ADB2-FF9A-4E49-99B9-EBE7CB186399}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EBD0ADB2-FF9A-4E49-99B9-EBE7CB186399}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
