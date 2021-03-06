@@ -106,20 +106,28 @@ namespace Linux_FuseFilesystem
         {
             fsys = this;
 
+            // Surely we can do something better with these spans
+
             var byteA = path.ToArray();
 
-            var inPath = new List<byte>();
+            var inPath = new List<byte>(byteA);
 
+            // This did what I expected in testing - it matched on the expected path stub
             var prefixMatch = mountTrie.FindPredecessor(path.ToArray());
+            if (prefixMatch == null) return new byte[0].AsSpan();  // Actually need to return something that indicates issues
 
+            var p = prefixMatch.Value;
 
-            
+            fsys = p.fuse;
+
+            inPath.RemoveRange(0, p.MountFrom.Length);
+            inPath.InsertRange(0, p.MountTo);
                  
             // Normalize the path (remove ..) - expensive
             // Find quick way to match the lhs of our path to the mountlist - something better than brute force
             //    -- remove the lhs, prepend the rhs
            
-            return path;
+            return inPath.ToArray();
         }
 
         // File read directories

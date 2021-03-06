@@ -62,6 +62,9 @@ namespace TestLibC
             var a = mt.FindPredecessor("/a/b/c");
             Console.WriteLine($"/a/b/c {a.Value}");
 
+            //a = mt.FindPredecessor("/a/b");
+            //Console.WriteLine($"/a/b {a.Value}");
+
 
 
         }
