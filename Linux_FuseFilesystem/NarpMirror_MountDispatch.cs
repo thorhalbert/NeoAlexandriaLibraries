@@ -4,10 +4,11 @@ using System.Collections.Generic;
 using System.Text;
 using Tmds.Fuse;
 using Tmds.Linux;
+using VDS.Common.Tries;
 
 namespace Linux_FuseFilesystem
 {
-    struct MountPoint
+    class MountPoint
     {
         public byte[] Name;
         public byte[] MountFrom;
@@ -50,9 +51,8 @@ namespace Linux_FuseFilesystem
     {
         // dispatch 
         Dictionary<byte[], MountPoint> mapSys = new Dictionary<byte[], MountPoint>();
+        readonly Trie<byte[], byte, MountPoint> mountTrie = new Trie<byte[], byte, MountPoint>(KeyMapper);
 
-        Trie<byte> FastPrefix = new Trie<byte>();
-        
 
         // It is assumed that these mountpoints are already normalized
         /// <summary>
@@ -84,24 +84,41 @@ namespace Linux_FuseFilesystem
             if (mapSys.ContainsKey(n))
             {
                 var map = mapSys[n];
+
+                mountTrie.Remove(map.MountFrom);
                 map.Remount(mountFrom, mountTo, fsys);
+                mountTrie.Add(mountFrom.ToArray(), map);
                 return;
             }
 
             var mountPoint = new MountPoint(name, mountFrom, mountTo, fsys);
             mapSys.Add(mountPoint.Name, mountPoint);
 
-         
-
+            mountTrie.Add(mountFrom.ToArray(), mountPoint);
         }
+
+        public static IEnumerable<byte> KeyMapper(byte[] key)
+        {
+            return key;
+        }
+
         public ReadOnlySpan<byte> DispatchOn(ReadOnlySpan<byte> path, out FuseFileSystemBase fsys)
         {
             fsys = this;
 
+            var byteA = path.ToArray();
+
+            var inPath = new List<byte>();
+
+            var prefixMatch = mountTrie.FindPredecessor(path.ToArray());
+
+
+            
+                 
             // Normalize the path (remove ..) - expensive
             // Find quick way to match the lhs of our path to the mountlist - something better than brute force
             //    -- remove the lhs, prepend the rhs
-
+           
             return path;
         }
 

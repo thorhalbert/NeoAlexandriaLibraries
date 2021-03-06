@@ -1,8 +1,10 @@
 ﻿using NeoCommon;
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 using Tmds.Linux;
+using VDS.Common.Tries;
 
 namespace TestLibC
 {
@@ -36,20 +38,37 @@ namespace TestLibC
             //    dumpBytes(buf, (int) count);
             //}
 
-            var dh = RawDirs.opendir(toNullTerm(Encoding.UTF8.GetBytes("/tmp")));
+            //var dh = RawDirs.opendir(toNullTerm(Encoding.UTF8.GetBytes("/tmp")));
 
-            while (true)
-            {
-                var dir = RawDirs.readdir_wrap(dh);
-                if (dir == null) break;
+            //while (true)
+            //{
+            //    var dir = RawDirs.readdir_wrap(dh);
+            //    if (dir == null) break;
 
-                var d = dir.Value;
+            //    var d = dir.Value;
 
-                var name = Encoding.UTF8.GetString(d.d_name);
-                Console.WriteLine($"{name}");
-            }
+            //    var name = Encoding.UTF8.GetString(d.d_name);
+            //    Console.WriteLine($"{name}");
+            //}
 
-            RawDirs.closedir(dh);
+            //RawDirs.closedir(dh);
+
+            var mt = new StringTrie<string>();
+
+            mt.Add("/a/b/", "ab#");
+            mt.Add("/a/c/", "ac#");
+            mt.Add("/b/b/", "bb#");
+
+            var a = mt.FindPredecessor("/a/b/c");
+            Console.WriteLine($"/a/b/c {a.Value}");
+
+
+
+        }
+
+        public static IEnumerable<byte> KeyMapper(byte[] key)
+        {
+            return key;
         }
 
         private static void dumpBytes(byte[] buffer, int count)
