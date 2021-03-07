@@ -10,27 +10,33 @@ namespace Linux_FuseFilesystem
 {
     public unsafe class NarpMirror_Fuse : FuseMountableBase
     {
+
+        bool debug = false;
+
+      
+
         public NarpMirror_Fuse()
         { 
 
-              Console.WriteLine($"NeoFS::NarpMirror_Fuse() constructor");
+              if (debug) Console.WriteLine($"NeoFS::NarpMirror_Fuse() constructor");
+            //SupportsMultiThreading = true;
         }
 
-        public override bool SupportsMultiThreading => true;
+        public override bool SupportsMultiThreading => false;
 
         // File read directories
         public override int OpenDir(ReadOnlySpan<byte> path, ref FuseFileInfo fi)
         {
             path = base.TransformPath(path);
 
-            Console.WriteLine($"NeoFS::OpenDir({RawDirs.HR(path)})");
+            if (debug) Console.WriteLine($"NeoFS::OpenDir({RawDirs.HR(path)})");
             return 0;
         }
         public override int ReadDir(ReadOnlySpan<byte> path, ulong offset, ReadDirFlags flags, DirectoryContent content, ref FuseFileInfo fi)
         {
             path = base.TransformPath(path);
 
-            Console.WriteLine($"NeoFS::ReadDir({RawDirs.HR(path)},{offset},{flags})");
+            if (debug) Console.WriteLine($"NeoFS::ReadDir({RawDirs.HR(path)},{offset},{flags})");
 
             // We only have the low level calls, so we need to do opendir/readdir ourself
 
@@ -45,7 +51,7 @@ namespace Linux_FuseFilesystem
 
                 var d = dir.Value;
 
-                Console.WriteLine($"{RawDirs.HR(path)} -> {RawDirs.HR(d.d_name)}");
+                if (debug) Console.WriteLine($"{RawDirs.HR(path)} -> {RawDirs.HR(d.d_name)}");
 
                 content.AddEntry(d.d_name.AsSpan());
             }
@@ -58,14 +64,14 @@ namespace Linux_FuseFilesystem
         {
             path = base.TransformPath(path);
 
-            Console.WriteLine($"NeoFS::ReleaseDir({RawDirs.HR(path)})");
+            if (debug) Console.WriteLine($"NeoFS::ReleaseDir({RawDirs.HR(path)})");
             return 0;
         }
         public override int FSyncDir(ReadOnlySpan<byte> path, bool onlyData, ref FuseFileInfo fi)
         {
             path = base.TransformPath(path);
 
-            Console.WriteLine($"NeoFS::FSyncDir()");
+            if (debug) Console.WriteLine($"NeoFS::FSyncDir()");
 
             LibC.sync();
 
@@ -78,7 +84,7 @@ namespace Linux_FuseFilesystem
         {
             path = base.TransformPath(path);
 
-            Console.WriteLine($"NeoFS::Open()");
+            if (debug) Console.WriteLine($"NeoFS::Open()");
 
             var newFd = LibC.open(toBp(path), fi.flags);
             if (newFd > 0)
@@ -93,7 +99,7 @@ namespace Linux_FuseFilesystem
         {
             path = base.TransformPath(path);
 
-            Console.WriteLine($"NeoFS::Read()");
+            if (debug) Console.WriteLine($"NeoFS::Read()");
             if (fi.fh == 0)
             {
                 var newFd = LibC.open(toBp(path), fi.flags);
@@ -117,7 +123,7 @@ namespace Linux_FuseFilesystem
         {
             path = base.TransformPath(path);
 
-            Console.WriteLine($"NeoFS::Release()");
+            if (debug) Console.WriteLine($"NeoFS::Release()");
             if (fi.fh > 0)
                 LibC.close((int) fi.fh);
 
@@ -127,7 +133,7 @@ namespace Linux_FuseFilesystem
         {
             path = base.TransformPath(path);
 
-            Console.WriteLine($"NeoFS::FSync()");
+            if (debug) Console.WriteLine($"NeoFS::FSync()");
             return 0; // base.FSync(path, ref fi);
         }
 
@@ -136,7 +142,7 @@ namespace Linux_FuseFilesystem
         {
             path = base.TransformPath(path);
 
-            Console.WriteLine($"NeoFS::Access({RawDirs.HR(path)},{mode}");
+            if (debug) Console.WriteLine($"NeoFS::Access({RawDirs.HR(path)},{mode}");
 
             var res = LibC.access(toBp(path), (int) mode);
             if (res < 0)
@@ -148,7 +154,7 @@ namespace Linux_FuseFilesystem
         {
             path = base.TransformPath(path);
 
-            Console.WriteLine($"NeoFS::GetAttr({RawDirs.HR(path)})");
+            if (debug) Console.WriteLine($"NeoFS::GetAttr({RawDirs.HR(path)})");
             fixed (stat* st = &stat)
             {
                 var lc = LibC.lstat(toBp(path), st);
@@ -162,7 +168,7 @@ namespace Linux_FuseFilesystem
         {
             path = base.TransformPath(path);
 
-            Console.WriteLine($"NeoFS::ReadLink()");
+            if (debug) Console.WriteLine($"NeoFS::ReadLink()");
           
             ssize_t retl;
             fixed (byte* b = buffer)
@@ -180,7 +186,7 @@ namespace Linux_FuseFilesystem
         {
             path = base.TransformPath(path);
 
-            Console.WriteLine($"NeoFS::Create()");
+            if (debug) Console.WriteLine($"NeoFS::Create()");
 
             fi.fh = 0;
 
@@ -196,7 +202,7 @@ namespace Linux_FuseFilesystem
         {
             path = base.TransformPath(path);
 
-            Console.WriteLine($"NeoFS::Write()");
+            if (debug) Console.WriteLine($"NeoFS::Write()");
             if (fi.fh == 0)
             {
                 var newFd = LibC.open(toBp(path), fi.flags);
@@ -222,7 +228,7 @@ namespace Linux_FuseFilesystem
 
       
 
-            Console.WriteLine($"NeoFS::Flush()");
+            if (debug) Console.WriteLine($"NeoFS::Flush()");
 
 
 
@@ -232,7 +238,7 @@ namespace Linux_FuseFilesystem
         {
             path = base.TransformPath(path);
 
-            Console.WriteLine($"NeoFS::FAllocate()");
+            if (debug) Console.WriteLine($"NeoFS::FAllocate()");
 
             if (fi.fh == 0)
             {
@@ -254,7 +260,7 @@ namespace Linux_FuseFilesystem
         public override int Truncate(ReadOnlySpan<byte> path, ulong length, FuseFileInfoRef fiRef)
         {
             path = base.TransformPath(path);
-            Console.WriteLine($"NeoFS::Truncate()");
+            if (debug) Console.WriteLine($"NeoFS::Truncate()");
 
             var res = LibC.truncate(toBp(path), (long) length);
 
@@ -267,7 +273,7 @@ namespace Linux_FuseFilesystem
         {
             path = base.TransformPath(path);
 
-            Console.WriteLine($"NeoFS::ChMod()");
+            if (debug) Console.WriteLine($"NeoFS::ChMod()");
 
             var res = LibC.chmod(toBp(path), mode);
             if (res < 0) return -LibC.errno;
@@ -277,14 +283,14 @@ namespace Linux_FuseFilesystem
         {
             path = base.TransformPath(path);
 
-            Console.WriteLine($"NeoFS::Chown()");
+            if (debug) Console.WriteLine($"NeoFS::Chown()");
             var res= LibC.chown(toBp(path), uid,gid);
             if (res < 0) return -LibC.errno;
             return 0;
         }
         public override int Link(ReadOnlySpan<byte> fromPath, ReadOnlySpan<byte> toPath)
         {
-            Console.WriteLine($"NeoFS::Link()");
+            if (debug) Console.WriteLine($"NeoFS::Link()");
             fromPath = base.TransformPath(fromPath);
             toPath = base.TransformPath(toPath);
 
@@ -299,7 +305,7 @@ namespace Linux_FuseFilesystem
         {
             path = base.TransformPath(path);
 
-            Console.WriteLine($"NeoFS::SymLink()");
+            if (debug) Console.WriteLine($"NeoFS::SymLink()");
             var fromPath = base.TransformPath(path);
             var toPath = base.TransformPath(target);
 
@@ -313,7 +319,7 @@ namespace Linux_FuseFilesystem
         {
             path = base.TransformPath(path);
 
-            Console.WriteLine($"NeoFS::UpdateTimestamps()");
+            if (debug) Console.WriteLine($"NeoFS::UpdateTimestamps()");
 
            // LibC.utimensat()
 
@@ -325,7 +331,7 @@ namespace Linux_FuseFilesystem
         {
             path = base.TransformPath(path);
 
-            Console.WriteLine($"NeoFS::MkDir()");
+            if (debug) Console.WriteLine($"NeoFS::MkDir()");
 
             var res = LibC.mkdir(toBp(path), mode);
             if (res < 0)
@@ -338,7 +344,7 @@ namespace Linux_FuseFilesystem
             path = base.TransformPath(path);
             newPath = base.TransformPath(newPath);
 
-            Console.WriteLine($"NeoFS::Rename()");
+            if (debug) Console.WriteLine($"NeoFS::Rename()");
 
             // Without rename call this is actually a bit involved
 
@@ -362,7 +368,7 @@ namespace Linux_FuseFilesystem
         {
             path = base.TransformPath(path);
 
-            Console.WriteLine($"NeoFS::RmDir()");
+            if (debug) Console.WriteLine($"NeoFS::RmDir()");
             var res = LibC.rmdir(toBp(path));
             if (res < 0)
                 return -LibC.errno;
@@ -373,7 +379,7 @@ namespace Linux_FuseFilesystem
         {
             path = base.TransformPath(path);
 
-            Console.WriteLine($"NeoFS::Unlink()");
+            if (debug) Console.WriteLine($"NeoFS::Unlink()");
             var res = LibC.unlink(toBp(path));
             if (res < 0)
                 return -LibC.errno;
@@ -386,7 +392,7 @@ namespace Linux_FuseFilesystem
         {
             path = base.TransformPath(path);
 
-            Console.WriteLine($"NeoFS::StatFS()");
+            if (debug) Console.WriteLine($"NeoFS::StatFS()");
 
             int res;
             fixed(statvfs* vfs = &statfs)

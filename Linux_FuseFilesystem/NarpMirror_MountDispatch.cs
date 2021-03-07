@@ -1,5 +1,4 @@
-﻿using Gma.DataStructures.StringSearch;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 using Tmds.Fuse;
@@ -112,9 +111,11 @@ namespace Linux_FuseFilesystem
 
             var inPath = new List<byte>(byteA);
 
+            normalize(inPath);
+
             // This did what I expected in testing - it matched on the expected path stub
-            var prefixMatch = mountTrie.FindPredecessor(path.ToArray());
-            if (prefixMatch == null) return new byte[0].AsSpan();  // Actually need to return something that indicates issues
+            var prefixMatch = mountTrie.FindPredecessor(inPath.ToArray());
+            if (prefixMatch == null) return new byte[0].AsSpan();  // Generates a ENOENT
 
             var p = prefixMatch.Value;
 
@@ -130,15 +131,30 @@ namespace Linux_FuseFilesystem
             return inPath.ToArray();
         }
 
+        public void normalize(List<byte> inPath)
+        {
+            var ps = new Stack<byte[]>();
+
+            var lwm = 1;
+            while (true)
+            {
+                var idx = inPath.IndexOf((byte) '/', lwm);
+                if (idx < 0) break;
+
+            }
+        }
+
         // File read directories
         public override int OpenDir(ReadOnlySpan<byte> path, ref FuseFileInfo fi)
         {
             var usePath = DispatchOn(path, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.OpenDir(usePath, ref fi);
         }
         public override int ReadDir(ReadOnlySpan<byte> path, ulong offset, ReadDirFlags flags, DirectoryContent content, ref FuseFileInfo fi)
         {
             var usePath = DispatchOn(path, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.ReadDir(usePath, offset, flags, content, ref fi);
         }
         public override int ReleaseDir(ReadOnlySpan<byte> path, ref FuseFileInfo fi)
@@ -149,6 +165,7 @@ namespace Linux_FuseFilesystem
         public override int FSyncDir(ReadOnlySpan<byte> readOnlySpan, bool onlyData, ref FuseFileInfo fi)
         {
             var usePath = DispatchOn(readOnlySpan, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.FSyncDir(usePath, onlyData, ref fi);
         }
 
@@ -157,21 +174,25 @@ namespace Linux_FuseFilesystem
         public override int Open(ReadOnlySpan<byte> path, ref FuseFileInfo fi)
         {
             var usePath = DispatchOn(path, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.Open(usePath, ref fi);
         }
         public override int Read(ReadOnlySpan<byte> path, ulong offset, Span<byte> buffer, ref FuseFileInfo fi)
         {
             var usePath = DispatchOn(path, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.Read(usePath, offset, buffer, ref fi);
         }
         public override void Release(ReadOnlySpan<byte> path, ref FuseFileInfo fi)
         {
             var usePath = DispatchOn(path, out var fs);
+            if (usePath.Length < 1) return;
             fs.Release(usePath, ref fi);
         }
         public override int FSync(ReadOnlySpan<byte> path, ref FuseFileInfo fi)
         {
             var usePath = DispatchOn(path, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.FSync(usePath, ref fi);
         }
 
@@ -179,88 +200,105 @@ namespace Linux_FuseFilesystem
         public override int Access(ReadOnlySpan<byte> path, mode_t mode)
         {
             var usePath = DispatchOn(path, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.Access(usePath, mode);
         }
         public override int GetAttr(ReadOnlySpan<byte> path, ref stat stat, FuseFileInfoRef fiRef)
         {
             var usePath = DispatchOn(path, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.GetAttr(usePath, ref stat, fiRef);
         }
         public override int ReadLink(ReadOnlySpan<byte> path, Span<byte> buffer)
         {
             var usePath = DispatchOn(path, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.ReadLink(usePath, buffer);
         }
         public override int GetXAttr(ReadOnlySpan<byte> path, ReadOnlySpan<byte> name, Span<byte> data)
         {
             var usePath = DispatchOn(path, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.GetXAttr(usePath, name, data);
         }
         public override int ListXAttr(ReadOnlySpan<byte> path, Span<byte> list)
         {
             var usePath = DispatchOn(path, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.ListXAttr(usePath, list);
         }
         // Write
         public override int Create(ReadOnlySpan<byte> path, mode_t mode, ref FuseFileInfo fi)
         {
             var usePath = DispatchOn(path, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.Create(usePath, mode, ref fi);
         }
         public override int Write(ReadOnlySpan<byte> path, ulong off, ReadOnlySpan<byte> span, ref FuseFileInfo fi)
         {
             var usePath = DispatchOn(path, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.Write(usePath, off, span, ref fi);
         }
         public override int Flush(ReadOnlySpan<byte> path, ref FuseFileInfo fi)
         {
             var usePath = DispatchOn(path, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.Flush(usePath, ref fi);
         }
         public override int FAllocate(ReadOnlySpan<byte> path, int mode, ulong offset, long length, ref FuseFileInfo fi)
         {
             var usePath = DispatchOn(path, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.FAllocate(usePath, mode, offset, length, ref fi);
         }
         public override int Truncate(ReadOnlySpan<byte> path, ulong length, FuseFileInfoRef fiRef)
         {
             var usePath = DispatchOn(path, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.Truncate(usePath, length, fiRef);
         }
         // Set metadata
         public override int ChMod(ReadOnlySpan<byte> path, mode_t mode, FuseFileInfoRef fiRef)
         {
             var usePath = DispatchOn(path, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.ChMod(usePath, mode, fiRef);
         }
         public override int Chown(ReadOnlySpan<byte> path, uint uid, uint gid, FuseFileInfoRef fiRef)
         {
             var usePath = DispatchOn(path, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.Chown(usePath, uid, gid, fiRef);
         }
         public override int Link(ReadOnlySpan<byte> fromPath, ReadOnlySpan<byte> toPath)
         {
             var usePath = DispatchOn(fromPath, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.Link(usePath, toPath);
         }
         public override int SetXAttr(ReadOnlySpan<byte> path, ReadOnlySpan<byte> name, ReadOnlySpan<byte> data, int flags)
         {
             var usePath = DispatchOn(path, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.SetXAttr(usePath, name, data, flags);
         }
         public override int RemoveXAttr(ReadOnlySpan<byte> path, ReadOnlySpan<byte> name)
         {
             var usePath = DispatchOn(path, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.RemoveXAttr(usePath, name);
         }
         public override int SymLink(ReadOnlySpan<byte> path, ReadOnlySpan<byte> target)
         {
             var usePath = DispatchOn(path, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.SymLink(usePath, target);
         }
         public override int UpdateTimestamps(ReadOnlySpan<byte> path, ref timespec atime, ref timespec mtime, FuseFileInfoRef fiRef)
         {
             var usePath = DispatchOn(path, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.UpdateTimestamps(usePath, ref atime, ref mtime, fiRef);
         }
 
@@ -268,21 +306,25 @@ namespace Linux_FuseFilesystem
         public override int MkDir(ReadOnlySpan<byte> path, mode_t mode)
         {
             var usePath = DispatchOn(path, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.MkDir(usePath, mode);
         }
         public override int Rename(ReadOnlySpan<byte> path, ReadOnlySpan<byte> newPath, int flags)
         {
             var usePath = DispatchOn(path, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.Rename(usePath, newPath, flags);
         }
         public override int RmDir(ReadOnlySpan<byte> path)
         {
             var usePath = DispatchOn(path, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.RmDir(usePath);
         }
         public override int Unlink(ReadOnlySpan<byte> path)
         {
             var usePath = DispatchOn(path, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.Unlink(usePath);
         }
 
@@ -290,6 +332,7 @@ namespace Linux_FuseFilesystem
         public override int StatFS(ReadOnlySpan<byte> path, ref statvfs statfs)
         {
             var usePath = DispatchOn(path, out var fs);
+            if (usePath.Length < 1) return -LibC.ENOENT;
             return fs.StatFS(usePath, ref statfs);
         }
     }
