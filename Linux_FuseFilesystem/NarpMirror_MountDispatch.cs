@@ -46,7 +46,7 @@ namespace Linux_FuseFilesystem
     //  Various filesystems are 'mounted' here and then based on the path they get dispatched to whichever 
     //  nested layer that has been mounted underneath
     /// </summary>  
-    class NarpMirror_MountDispatch : FuseFileSystemBase
+    public class NarpMirror_MountDispatch : FuseFileSystemBase
     {
         // dispatch 
         Dictionary<byte[], MountPoint> mapSys = new Dictionary<byte[], MountPoint>();
@@ -115,7 +115,7 @@ namespace Linux_FuseFilesystem
 
             // This did what I expected in testing - it matched on the expected path stub
             var prefixMatch = mountTrie.FindPredecessor(inPath.ToArray());
-            if (prefixMatch == null) return new byte[0].AsSpan();  // Generates a ENOENT
+            if (prefixMatch == null) return path;  // new byte[0].AsSpan();  // Generates a ENOENT
 
             var p = prefixMatch.Value;
 

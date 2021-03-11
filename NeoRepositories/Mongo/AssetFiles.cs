@@ -1,11 +1,19 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace NeoRepositories.Mongo
 {
+    public static class AssetFiles_exts
+    {
+        public static IMongoCollection<AssetFiles> AssetFiles(this IMongoDatabase db)
+        {
+            return db.GetCollection<AssetFiles>("AssetFiles");
+        }
+    }
     public class AssetFiles
     {
         public string _id { get; set; }
@@ -31,11 +39,11 @@ namespace NeoRepositories.Mongo
 
     public class AssetFiles_Stat
     {
-        [BsonRequired] public UInt32 atime { get; set; }   // 1936260/2000000
-        [BsonRequired] public UInt32 ctime { get; set; }   // 1936260/2000000
+        [BsonRequired] public Int64 atime { get; set; }   // 1936260/2000000
+        [BsonRequired] public Int64 ctime { get; set; }   // 1936260/2000000
         [BsonRequired] public UInt32 gid { get; set; } // 1936260/2000000
         [BsonRequired] public UInt32 mode { get; set; }    // 1936260/2000000
-        [BsonRequired] public UInt64 mtime { get; set; }   // 1936260/2000000
+        [BsonRequired] public Int64 mtime { get; set; }   // 1936260/2000000
         [BsonRequired] public UInt32 size { get; set; }    // 1936260/2000000
         [BsonRequired] public UInt32 uid { get; set; } // 1936260/2000000
     }

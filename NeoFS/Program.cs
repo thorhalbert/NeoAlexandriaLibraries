@@ -19,8 +19,12 @@ namespace NeoFS
                 return;
             }
 
-            IFuseFileSystem fileSystem;
-            fileSystem = new NarpMirror_Fuse();
+            var provisioner = new ProvisionFilesystem();
+
+
+         
+
+            var fileSystem = provisioner.CreateFs();
    
             string mountPoint = $"/tmp/NeoFS";
             System.Console.WriteLine($"Mounting filesystem at {mountPoint}");

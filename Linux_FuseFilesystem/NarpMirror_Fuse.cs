@@ -11,15 +11,16 @@ namespace Linux_FuseFilesystem
     public unsafe class NarpMirror_Fuse : FuseMountableBase
     {
 
-        bool debug = false;
+        bool debug = true;
+        readonly byte[] assetTag = Encoding.ASCII.GetBytes("/NEOASSET/sha1/");
 
-      
 
         public NarpMirror_Fuse()
         { 
 
               if (debug) Console.WriteLine($"NeoFS::NarpMirror_Fuse() constructor");
             //SupportsMultiThreading = true;
+
         }
 
         public override bool SupportsMultiThreading => false;
@@ -142,7 +143,8 @@ namespace Linux_FuseFilesystem
         {
             path = base.TransformPath(path);
 
-            if (debug) Console.WriteLine($"NeoFS::Access({RawDirs.HR(path)},{mode}");
+            //if (debug)
+                Console.WriteLine($"NeoFS::Access({RawDirs.HR(path)},{mode}");
 
             var res = LibC.access(toBp(path), (int) mode);
             if (res < 0)
@@ -154,15 +156,42 @@ namespace Linux_FuseFilesystem
         {
             path = base.TransformPath(path);
 
-            if (debug) Console.WriteLine($"NeoFS::GetAttr({RawDirs.HR(path)})");
+            //if (debug)
+                Console.WriteLine($"NeoFS::GetAttr({RawDirs.HR(path)})");
             fixed (stat* st = &stat)
             {
                 var lc = LibC.lstat(toBp(path), st);
                 if (lc < 0)
                     return -LibC.errno;
-
-                return 0;
             }
+
+            // Intercept an asset - we must provide the asset's Attr, not the link of the baked file
+            if ((stat.st_mode & LibC.S_IFMT) == LibC.S_IFLNK)
+            {
+                Console.WriteLine($"Stat mode={stat.st_mode}, S_IFMT={LibC.S_IFMT}, link={LibC.S_IFLNK}");
+                ssize_t retl;
+                var buffer = new byte[1024];
+                fixed (byte* b = buffer)
+                {
+                    retl = LibC.readlink(toBp(path), b, buffer.Length);
+                }
+
+                // Trying to do something like startswith for bytes that's fast
+                var link = MemoryExtensions.AsSpan<byte>(buffer, 0, assetTag.Length);
+
+                Console.WriteLine($"NeoFS::GetAttr Asset Detected - ({RawDirs.HR(path)}, {RawDirs.HR(link)}");
+
+                if (link.SequenceEqual(assetTag))
+                {
+                   
+                    link = MemoryExtensions.AsSpan<byte>(buffer, 0, (int)retl);
+                    Console.WriteLine($"Found ASSET {RawDirs.HR(link)}");
+                    base.GetAssetAttr(path, link, stat, fiRef);
+                }
+            }
+
+            return 0;
+
         }
         public override int ReadLink(ReadOnlySpan<byte> path, Span<byte> buffer)
         {
