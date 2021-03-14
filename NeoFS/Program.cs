@@ -1,4 +1,6 @@
 ﻿using Linux_FuseFilesystem;
+using MongoDB.Driver;
+using NeoRepositories.Mongo;
 using System;
 using System.IO;
 using System.Threading;
@@ -11,8 +13,13 @@ namespace NeoFS
     {
         static async Task Main(string[] args)
         {
-            //string type = args.Length > 0 ? args[0] : "hello";
+            var conn = Environment.GetEnvironmentVariable("MONGO_URI");
+            var Connection = new MongoClient(conn);
 
+            var NeoDb = Connection.GetDatabase("NeoAlexandria");
+
+            var narps = NeoDb.NARPs();
+                 
             if (!Fuse.CheckDependencies())
             {
                 Console.WriteLine(Fuse.InstallationInstructions);
@@ -24,7 +31,7 @@ namespace NeoFS
 
          
 
-            var fileSystem = provisioner.CreateFs();
+            var fileSystem = provisioner.CreateFs(NeoDb, narps);
    
             string mountPoint = $"/tmp/NeoFS";
             System.Console.WriteLine($"Mounting filesystem at {mountPoint}");

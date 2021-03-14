@@ -30,15 +30,18 @@ namespace NeoRepositories.Mongo
         [BsonRequired] public string RepoType { get; set; } // 1936260/2000000
         [BsonRequired] public AssetFiles_Stat Stat { get; set; }    // 1936260/2000000
         [BsonRequired] public string StateUUID { get; set; }    // 1936260/2000000
-        [BsonRequired] public string DirId { get; set; }    // 1868874/2000000
-        [BsonRequired] public string NARP { get; set; } // 1862818/2000000
-        [BsonIgnoreIfNull] public BsonDocument Owners { get; set; } // 763544/2000000
+        [BsonIgnoreIfNull] public string DirId { get; set; }    // 1868874/2000000
+        [BsonIgnoreIfNull] public string NARP { get; set; } // 1862818/2000000
+        //[BsonIgnoreIfNull] public BsonDocument Owners { get; set; } // 763544/2000000
         [BsonIgnoreIfNull] public string LastRealPath { get; set; } // 147060/2000000
         [BsonIgnoreIfNull] public BsonDocument History { get; set; }   // 10258/2000000
+
+        [BsonExtraElements] public BsonDocument _CatchAll { get; set; }
     }
 
     public class AssetFiles_Stat
     {
+       
         [BsonRequired] public Int64 atime { get; set; }   // 1936260/2000000
         [BsonRequired] public Int64 ctime { get; set; }   // 1936260/2000000
         [BsonRequired] public UInt32 gid { get; set; } // 1936260/2000000

@@ -1,12 +1,19 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace NeoRepositories.Mongo
 {
-
+    public static class NARPs_exts
+    {
+        public static IMongoCollection<NARPs> NARPs(this IMongoDatabase db)
+        {
+            return db.GetCollection<NARPs>("NARPs");
+        }
+    }
     public class NARPs
     {
         public string _id { get; set; }
@@ -45,6 +52,8 @@ namespace NeoRepositories.Mongo
         [BsonIgnoreIfNull] public DateTime? Finished { get; set; }  // 2/7824
         [BsonIgnoreIfNull] public bool? Hold { get; set; }  // 2/7824
         [BsonIgnoreIfNull] public string HoldReason { get; set; }   // 2/7824
+
+        [BsonExtraElements] public BsonDocument _CatchAll { get; set; }
     }
 
     public class NARPS_Totals_Content
@@ -109,6 +118,8 @@ namespace NeoRepositories.Mongo
         [BsonIgnoreIfNull] public List<BsonDocument> Queue { get; set; }  // 7820/7824
         [BsonIgnoreIfNull] public DateTime? Queued { get; set; }    // 7820/7824
         [BsonIgnoreIfNull] public UInt32? Version { get; set; } // 7820/7824
+
+        [BsonExtraElements] public BsonDocument _CatchAll { get; set; }
     }
     public class NARPS_Totals_Archive
     {

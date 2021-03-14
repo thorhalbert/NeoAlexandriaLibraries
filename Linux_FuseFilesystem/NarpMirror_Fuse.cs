@@ -11,12 +11,13 @@ namespace Linux_FuseFilesystem
     public unsafe class NarpMirror_Fuse : FuseMountableBase
     {
 
-        bool debug = true;
+       
         readonly byte[] assetTag = Encoding.ASCII.GetBytes("/NEOASSET/sha1/");
 
 
         public NarpMirror_Fuse()
-        { 
+        {
+            base.debug = false;
 
               if (debug) Console.WriteLine($"NeoFS::NarpMirror_Fuse() constructor");
             //SupportsMultiThreading = true;
@@ -156,7 +157,7 @@ namespace Linux_FuseFilesystem
         {
             path = base.TransformPath(path);
 
-            //if (debug)
+            if (debug)
                 Console.WriteLine($"NeoFS::GetAttr({RawDirs.HR(path)})");
             fixed (stat* st = &stat)
             {
@@ -168,7 +169,7 @@ namespace Linux_FuseFilesystem
             // Intercept an asset - we must provide the asset's Attr, not the link of the baked file
             if ((stat.st_mode & LibC.S_IFMT) == LibC.S_IFLNK)
             {
-                Console.WriteLine($"Stat mode={stat.st_mode}, S_IFMT={LibC.S_IFMT}, link={LibC.S_IFLNK}");
+                if (debug) Console.WriteLine($"Stat mode={stat.st_mode}, S_IFMT={LibC.S_IFMT}, link={LibC.S_IFLNK}");
                 ssize_t retl;
                 var buffer = new byte[1024];
                 fixed (byte* b = buffer)
@@ -179,14 +180,17 @@ namespace Linux_FuseFilesystem
                 // Trying to do something like startswith for bytes that's fast
                 var link = MemoryExtensions.AsSpan<byte>(buffer, 0, assetTag.Length);
 
-                Console.WriteLine($"NeoFS::GetAttr Asset Detected - ({RawDirs.HR(path)}, {RawDirs.HR(link)}");
+                if (debug) Console.WriteLine($"NeoFS::GetAttr Asset Detected - ({RawDirs.HR(path)}, {RawDirs.HR(link)}");
 
                 if (link.SequenceEqual(assetTag))
                 {
                    
                     link = MemoryExtensions.AsSpan<byte>(buffer, 0, (int)retl);
-                    Console.WriteLine($"Found ASSET {RawDirs.HR(link)}");
-                    base.GetAssetAttr(path, link, stat, fiRef);
+                    if (debug) Console.WriteLine($"Found ASSET {RawDirs.HR(link)}");
+                    var g = Guid.Empty;
+                    if (!fiRef.IsNull && fiRef.Value.ExtFileHandle.HasValue)
+                        g = fiRef.Value.ExtFileHandle.Value;
+                    base.GetAssetAttr(path, link, ref stat, g);
                 }
             }
 
@@ -197,7 +201,7 @@ namespace Linux_FuseFilesystem
         {
             path = base.TransformPath(path);
 
-            if (debug) Console.WriteLine($"NeoFS::ReadLink()");
+            if (debug) Console.WriteLine($"NeoFS::ReadLink({RawDirs.HR(path)}");
           
             ssize_t retl;
             fixed (byte* b = buffer)
@@ -206,7 +210,7 @@ namespace Linux_FuseFilesystem
             }
 
             if (retl < 0) return -LibC.errno;
-                              
+
             return 0;
         }
       

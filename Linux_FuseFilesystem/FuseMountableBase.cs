@@ -1,4 +1,5 @@
-﻿using MongoDB.Driver;
+﻿using Logos.Utility;
+using MongoDB.Driver;
 using NeoCommon;
 using NeoRepositories.Mongo;
 using System;
@@ -12,6 +13,27 @@ namespace Linux_FuseFilesystem
     public class FuseMountableBase : FuseFileSystemBase
     {
         MongoDB.Driver.IMongoCollection<AssetFiles> assetFiles = null;
+        protected bool debug = false;
+
+        public FuseMountableBase()
+        {
+          
+
+            //Guid g;
+
+            //g = GuidUtility.Create(GuidUtility.DnsNamespace, "python.org");
+            //Console.WriteLine($"{g.ToString()} = '886313e1-3b8a-5372-9b90-0c9aee199e5d'");
+
+            //g = GuidUtility.Create(GuidUtility.UrlNamespace, "http://python.org/");
+            //Console.WriteLine($"{g.ToString()} = '4c565f0d-3f5a-5890-b41b-20cf47701c5e'");
+
+            //g = GuidUtility.Create(GuidUtility.IsoOidNamespace, "1.3.6.1");
+            //Console.WriteLine($"{g.ToString()} = '1447fa61-5277-5fef-a9b3-fbc6e44f4af3'");
+
+            //g = GuidUtility.Create(new Guid("6ba7b814-9dad-11d1-80b4-00c04fd430c8"), "c=ca");
+            //Console.WriteLine($"{g.ToString()} =  'cc957dd1-a972-5349-98cd-874190002798'");
+
+        }
         internal ReadOnlySpan<byte> TransformPath(ReadOnlySpan<byte> path)
         {
             return path;
@@ -22,41 +44,43 @@ namespace Linux_FuseFilesystem
         {
             path = TransformPath(path);
 
-            Console.WriteLine($"NeoFS::GetXAttr()");
+            if (debug) Console.WriteLine($"NeoFS::GetXAttr()");
             return base.GetXAttr(path, name, data);
         }
         public override int ListXAttr(ReadOnlySpan<byte> path, Span<byte> list)
         {
             path = TransformPath(path);
 
-            Console.WriteLine($"NeoFS::ListXAttr()");
+            if (debug) Console.WriteLine($"NeoFS::ListXAttr()");
             return base.ListXAttr(path, list);
         }
         public override int SetXAttr(ReadOnlySpan<byte> path, ReadOnlySpan<byte> name, ReadOnlySpan<byte> data, int flags)
         {
             path = TransformPath(path);
 
-            Console.WriteLine($"NeoFS::SetXAttr()");
+            if (debug) Console.WriteLine($"NeoFS::SetXAttr()");
             return base.SetXAttr(path, name, data, flags);
         }
         public override int RemoveXAttr(ReadOnlySpan<byte> path, ReadOnlySpan<byte> name)
         {
             path = TransformPath(path);
 
-            Console.WriteLine($"NeoFS::RemoveXAttr()");
+            if (debug) Console.WriteLine($"NeoFS::RemoveXAttr()");
             return base.RemoveXAttr(path, name);
         }
 
-        internal void GetAssetAttr(ReadOnlySpan<byte> path, Span<byte> link, stat stat, FuseFileInfoRef fiRef)
+        internal void GetAssetAttr(ReadOnlySpan<byte> path, Span<byte> link, ref stat stat, Guid fileuuid)
         {
             // Even though we have the id of the asset, we actually need the entry from BakedFiles,
             // which should have the last stat on it - or we use FileInfo in the sql database - maybe we'll do both
             // The asset might exist as lots of different files with lots of date (though only one size)
 
-            Console.WriteLine($"Found Tag: {RawDirs.HR(path)}={RawDirs.HR(link)}");
+            if (debug) Console.WriteLine($"Found Tag: {RawDirs.HR(path)}={RawDirs.HR(link)}");
 
-            // Luckily I had sources here so I made it so I could path a byte path rather than a string
-            var fileuuid = GuidEx.NewGuid(path.ToArray(), new Guid(GuidEx.NameSpaceUrl));
+            // Had to find/build a python compatible uuid5 -- the guidex module does not make valid uuid5s
+            //var fileuuid = Guid.Empty;
+            //if (fiRef.ExtFileHandle.HasValue)
+            //    fileuuid = fiRef.ExtFileHandle.Value;
 
             if (assetFiles==null)
                 assetFiles = NeoCommon.NeoMongo.NeoDb.AssetFiles();
@@ -74,11 +98,14 @@ namespace Linux_FuseFilesystem
 
             if (aRec != null)
             {
-
-                // These should be synthesized
+                // These should be synthesized - eventually we'll have more security here - for now 
+                //   all owned by neo:neo and world readable
+                //stat.st_mode = (mode_t) aRec.Stat.mode;
+                //stat.st_mode = S_IFREG | 0b100_100_100; // r--r--r--
+                stat.st_nlink = 1;
                 stat.st_mode = LibC.S_IFREG | (mode_t) 0b100_100_100;   // 444 protection for now
-                stat.st_uid = aRec.Stat.uid;
-                stat.st_gid = aRec.Stat.gid;
+                stat.st_uid = 10010; // aRec.Stat.uid;
+                stat.st_gid = 10010; // aRec.Stat.gid;
 
                 stat.st_size = aRec.Stat.size;
                
@@ -97,6 +124,8 @@ namespace Linux_FuseFilesystem
                     tv_sec = aRec.Stat.atime,
                     tv_nsec = 0
                 };
+
+                if (debug) Console.WriteLine($"Return stat for: {fileuuid.ToString().ToLower()}");
 
                 return;
             }

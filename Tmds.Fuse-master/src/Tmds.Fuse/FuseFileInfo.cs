@@ -13,6 +13,8 @@ namespace Tmds.Fuse
         public ulong lock_owner { get; set; }
         public uint poll_events { get; set; }
 
+        public Guid? ExtFileHandle { get; set; }
+
         public bool writepage
         {
             get => (_bitfields & WRITEPAGE) != 0;
