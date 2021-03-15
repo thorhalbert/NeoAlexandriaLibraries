@@ -54,7 +54,7 @@ namespace Linux_FuseFilesystem
         Dictionary<byte[], MountPoint> mapSys = new Dictionary<byte[], MountPoint>();
         readonly Trie<byte[], byte, MountPoint> mountTrie = new Trie<byte[], byte, MountPoint>(KeyMapper);
         FuseMountableBase defaultLayer;
-        bool debug = false;
+        bool debug = true;
 
         public NarpMirror_MountDispatch(FuseMountableBase defLayer)
         {

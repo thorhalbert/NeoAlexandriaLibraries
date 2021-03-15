@@ -84,7 +84,7 @@ namespace AssetFileSystem
         //ulong real_position = 0;
         //ulong decomp_position = 0;
 
-        public File(string subpath, IMongoDatabase db, IMongoCollection<BakedAssets> bac)
+        public File(string subpath, IMongoDatabase db, IMongoCollection<BakedAssets> bac, IMongoCollection<BakedVolumes> bVol = null)
         {
             this.db = db;
             this.bac = bac;
@@ -102,7 +102,9 @@ namespace AssetFileSystem
             // Also this scheme needs access controls
             if (baRec == null) return;
 
-            var vCol = db.BakedVolumes();
+            var vCol = bVol;
+            if (vCol==null)
+                vCol = db.BakedVolumes();
 
             try
             {
@@ -238,7 +240,7 @@ namespace AssetFileSystem
             }
         }
 
-        private class UnbakeContext
+        public class UnbakeContext
         {
             private IMongoDatabase db;
             private BakedVolumes volRec;
@@ -367,8 +369,149 @@ namespace AssetFileSystem
                 return returnVal.Payload.Memory.Slice(0,length);
             }
 
+            internal void Release()
+            {
+                // Let our GC happen quickly
+            }
+        }
+        /// <summary>
+        /// Helper class to move the basic mechanics of unbaking into this class
+        /// and provide appropriate interfaces (and keep light context for the file
+        /// open as needed)
+        /// </summary>
+        public class UnbakeForFuse
+        {
+        
 
-  
+            IMongoDatabase db;
+            public IMongoCollection<BakedAssets> bakedAssets { get; set; }
+
+            private File file;
+
+            public IMongoCollection<BakedVolumes> bakedVolumes { get; set; }
+            public Stream assetStream { get; private set; }
+            public ulong CurrentPosition { get; private set; }
+
+
+            BakedVolumes volRec;
+            BakedAssets baRec;
+
+            byte[] bigBuffer = null;
+            ulong bufferOffset = 0;
+            ulong bufferBytes = 0;
+        
+
+            public UnbakeForFuse(IMongoDatabase db,   IMongoCollection<BakedAssets> bac, IMongoCollection<BakedVolumes> bVol, string assetId)
+            {
+                this.db = db;
+                this.bakedAssets = bac;
+
+                Console.WriteLine($"UnbakeForFuse::Construct Asset={assetId}");
+
+                // We must wrap the file stream since we need the un-gzip to happen
+
+                file = new File(assetId, db, bac);
+                assetStream = file.CreateReadStream();
+
+                CurrentPosition = 0;
+                bigBuffer = null;  // Discard anything we have here
+                bufferBytes = 0;
+                bufferOffset = 0;
+            }
+
+
+            public int Read(ulong offset, Span<byte> buffer)
+            {
+                Console.WriteLine($"UnbakeForFuse::Read({offset}, {buffer.Length} length)");
+
+                // Implement offset as if we are seekable
+                // Compute a forward gap and eat those bytes as we read forward
+                // If we get a negative gap, we rewind back to beginning and forward again
+
+                // We're going to read big chunks
+
+                if (bigBuffer==null)
+                    bigBuffer = new Byte[1 * 1024 * 1024];
+
+                // See if we need to rewind - we need to see how often this
+                // happens 
+                if (offset < CurrentPosition)
+                    RewindReopen();
+
+                // Bytes to skip over to accomplish offset
+                var SkipDelta = offset - CurrentPosition;
+
+                // We may have to loop indefinately to fulfill SkipDelta
+                while (true)
+                {
+                    if (bufferOffset >= bufferBytes)
+                        bufferOffset = bufferBytes = 0;
+
+                    if (bufferBytes < 1)  // See if we need to load the buffer - back to beginning
+                    {
+                        // Load in some buffer if we don't already have it
+                        bufferBytes = (ulong) assetStream.Read(bigBuffer, 0, bigBuffer.Length);
+                        Console.WriteLine($"[Stream read {bufferBytes}]");
+                        bufferOffset = 0;
+                        if (bufferBytes < 1)
+                        {
+                            Console.WriteLine("[EOF]");
+                            return 0;
+                        }
+                    }
+                    
+                    // What's left in buffer 
+                    var avail = bufferBytes - bufferOffset;
+
+                    // SkipDelta bigger than what's left -- eat it and get more
+                    if ((bufferBytes-bufferOffset) < SkipDelta)
+                    {
+                        CurrentPosition += avail;  // Move high water level
+                        SkipDelta -= avail;        // We've accomplished this much of offset
+                        bufferOffset += avail;     // Mark bytes as consumed
+
+                        continue;   // Back for more 
+                    }
+
+                    // Return what we can of the buffer
+                    var retBytes = Math.Min(avail, (ulong) buffer.Length);
+
+                    // Make a span of our buffer - should be cheap
+                    var oSpan = bigBuffer.AsSpan();
+
+                    // Write into the buffer - this actually wasn't that easy to figure out
+                    oSpan.Slice((int) bufferOffset, (int) (bufferOffset + retBytes)).CopyTo(buffer);
+
+                    bufferOffset += retBytes;
+                    CurrentPosition += retBytes;
+
+                    Console.WriteLine($"[Return {retBytes} bytes]");
+                    return (int) retBytes;
+                }
+            }
+
+            /// <summary>
+            /// We've seen an offset that needs us to rewind.
+            /// Rewind and go back to the beginning.
+            /// </summary>
+            private void RewindReopen()
+            {
+                assetStream.Close();
+                assetStream = file.CreateReadStream();
+
+                CurrentPosition = 0;
+                bigBuffer = null;  // Discard anything we have here
+                bufferBytes = 0;
+                bufferOffset = 0;
+            }
+            public void Release()
+            {
+                // Clear/Destroy any buffers we have outstanding
+
+                bigBuffer = null;
+                assetStream.Close();
+                file = null;
+            }
         }
     }
 }

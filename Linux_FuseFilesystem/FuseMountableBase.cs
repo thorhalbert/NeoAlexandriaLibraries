@@ -1,5 +1,6 @@
 ﻿using Logos.Utility;
 using MongoDB.Driver;
+using NeoBakedVolumes.Mongo;
 using NeoCommon;
 using NeoRepositories.Mongo;
 using System;
@@ -12,12 +13,16 @@ namespace Linux_FuseFilesystem
 {
     public class FuseMountableBase : FuseFileSystemBase
     {
-        MongoDB.Driver.IMongoCollection<AssetFiles> assetFiles = null;
-        protected bool debug = false;
+        private IMongoCollection<AssetFiles> assetFiles = null;
+        private IMongoCollection<BakedAssets> bakedAssets;
+        private IMongoCollection<BakedVolumes> bakedVolumes;
+
+        protected bool debug = true;
+
 
         public FuseMountableBase()
         {
-          
+
 
             //Guid g;
 
@@ -82,8 +87,8 @@ namespace Linux_FuseFilesystem
             //if (fiRef.ExtFileHandle.HasValue)
             //    fileuuid = fiRef.ExtFileHandle.Value;
 
-            if (assetFiles==null)
-                assetFiles = NeoCommon.NeoMongo.NeoDb.AssetFiles();
+            if (assetFiles == null)
+                assetFiles = NeoMongo.NeoDb.AssetFiles();
 
             AssetFiles aRec = null;
             try
@@ -108,7 +113,7 @@ namespace Linux_FuseFilesystem
                 stat.st_gid = 10010; // aRec.Stat.gid;
 
                 stat.st_size = aRec.Stat.size;
-               
+
                 stat.st_ctim = new timespec
                 {
                     tv_sec = aRec.Stat.ctime,
@@ -132,5 +137,34 @@ namespace Linux_FuseFilesystem
 
             Console.WriteLine($"Can't find AssetFile: {fileuuid.ToString().ToLower()}");
         }
+
+        internal int AssetOpen(ReadOnlySpan<byte> path, ref FuseFileInfo fi)
+        {
+            // Lazy load these, but just once
+            if (bakedAssets == null)
+                bakedAssets = NeoMongo.NeoDb.BakedAssets();
+            if (bakedVolumes == null)
+                bakedVolumes = NeoMongo.NeoDb.BakedVolumes();
+
+            // "Open" the file -- mostly just setup
+            var assetLink = new AssetFileSystem.File.UnbakeForFuse(NeoMongo.NeoDb, bakedAssets, bakedVolumes, fi.ExtAssetSha1);          
+            fi.AssetLink = assetLink;  // Save in file context -- mostly needed by read
+
+            return 1;   // Fake file handle - nothing should refer to it or use it
+        }
+        internal int AssetRead(ReadOnlySpan<byte> path, ulong offset, Span<byte> buffer, ref FuseFileInfo fi)
+        {
+            var assetLink = (AssetFileSystem.File.UnbakeForFuse) fi.AssetLink;
+            return assetLink.Read(offset, buffer);
+        }
+        internal void AssetRelease(ReadOnlySpan<byte> path, ref FuseFileInfo fi)
+        {
+            var assetLink = (AssetFileSystem.File.UnbakeForFuse) fi.AssetLink;
+            assetLink.Release();   // Internally clear buffers and such
+
+            fi.AssetLink = null;  // Let this go out of scope
+            fi.ExtAssetSha1 = null;
+        }
+
     }
 }

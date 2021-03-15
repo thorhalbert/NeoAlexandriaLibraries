@@ -14,6 +14,8 @@ namespace Tmds.Fuse
         public uint poll_events { get; set; }
 
         public Guid? ExtFileHandle { get; set; }
+        public string ExtAssetSha1 { get; set; }
+        public object AssetLink { get; set; }
 
         public bool writepage
         {
