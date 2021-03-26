@@ -488,6 +488,7 @@ namespace AssetFileSystem
                             // Load in some buffer if we don't already have it
 
                             var readBuffer = bigMemory.Slice(bigRemaining.Length);
+                            bigRemaining.CopyTo(bigMemory);
                             var bufferBytes = assetStream.Read(readBuffer.Span);
 
                             sha1Computer2.TransformBlock(readBuffer.ToArray(), 0, bufferBytes, readBuffer.ToArray(), 0);
