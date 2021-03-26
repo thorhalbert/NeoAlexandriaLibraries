@@ -43,6 +43,7 @@ namespace Tmds.Fuse
             s_libFuseHandle = dlopen(LibraryName, 2);
             if (s_libFuseHandle == IntPtr.Zero)
             {
+                Console.WriteLine($"Can't find library: {LibraryName}");
                 return;
             }
 
@@ -61,6 +62,7 @@ namespace Tmds.Fuse
             IntPtr functionPtr = dlvsym(s_libFuseHandle, name, version);
             if (functionPtr == IntPtr.Zero)
             {
+                Console.WriteLine($"Can't find CreateDelegate: {LibraryName} {name}:{version}");
                 throw new FuseException($"Unable to resolve libfuse function {name}:{version}.");
             }
             return  Marshal.GetDelegateForFunctionPointer<T>(functionPtr);
@@ -73,6 +75,7 @@ namespace Tmds.Fuse
             {
                 fixed (byte* pVersion = Encoding.UTF8.GetBytes(version))
                 {
+                    Console.WriteLine($"Found dlvsym: {LibraryName} {name}:{version}");
                     return new IntPtr(LibC.dlvsym(libHandle.ToPointer(), pName, pVersion));
                 }
             }
@@ -80,9 +83,11 @@ namespace Tmds.Fuse
 
         private static IntPtr dlopen(string libraryName, int flags)
         {
+            Console.WriteLine($"Open Library: {libraryName} {flags}");
             byte[] libNameBytes = Encoding.UTF8.GetBytes(libraryName);
             fixed (byte* pName = libNameBytes)
             {
+                Console.WriteLine($"Found dlopen: {LibraryName} {flags}");
                 return new IntPtr(LibC.dlopen(pName, flags));
             }
         }

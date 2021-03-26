@@ -76,11 +76,12 @@ namespace NeoFS
         // The mount-mapper really should run every 15 minutes or so
         internal IFuseFileSystem CreateFs(IMongoDatabase db, IMongoCollection<NARPs> bac)
         {
+            var rootSystem = new NarpMirror_TopLevel();
             var basePassthrough = new NarpMirror_Fuse();
 
             // Now we have to generate all the mountpoints
 
-            var topLayer = new NarpMirror_MountDispatch(basePassthrough);
+            var topLayer = new NarpMirror_MountDispatch(rootSystem);
 
             // This gets the links from /NARP - maybe this should come from mongo NARPs (or a mixture)
             foreach (var v in GetNarps(bac))
@@ -94,6 +95,9 @@ namespace NeoFS
                 var link = Encoding.UTF8.GetString(v.Value);
                 Console.WriteLine($"Mount {name} as {link}");
             }
+
+            // Load the mountpoints
+            rootSystem.Mountpoints = topLayer.MapSys;
 
             return topLayer;
         }

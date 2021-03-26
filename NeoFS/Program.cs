@@ -26,13 +26,19 @@ namespace NeoFS
                 return;
             }
 
+            // Test to see if we can new a FuseFileInfo
+
+            var fi = new FuseFileInfo();
+
             var provisioner = new ProvisionFilesystem();
 
 
-         
 
-            var fileSystem = provisioner.CreateFs(NeoDb, narps);
-   
+
+            //var fileSystem = new NarpMirror_Fuse();  //  provisioner.CreateFs(NeoDb, narps);
+            var fileSystem =  provisioner.CreateFs(NeoDb, narps);
+            //var fileSystem = new Mounter.MemoryFileSystem(); 
+
             string mountPoint = $"/tmp/NeoFS";
             System.Console.WriteLine($"Mounting filesystem at {mountPoint}");
 
@@ -48,7 +54,8 @@ namespace NeoFS
                     SingleThread = false
                 };
 
-                using (var mount = Fuse.Mount(mountPoint, fileSystem, mo))
+                // Debug = "-d"
+                using (var mount = Fuse.Mount(mountPoint, fileSystem, mo, Arguments : new string[] { }))
                 {
                     await mount.WaitForUnmountAsync();
                 }

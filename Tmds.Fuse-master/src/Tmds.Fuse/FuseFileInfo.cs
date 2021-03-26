@@ -13,9 +13,9 @@ namespace Tmds.Fuse
         public ulong lock_owner { get; set; }
         public uint poll_events { get; set; }
 
-        public Guid? ExtFileHandle { get; set; }
-        public string ExtAssetSha1 { get; set; }
-        public object AssetLink { get; set; }
+        //public Guid? ExtFileHandle { get; set; }
+        //public string ExtAssetSha1 { get; set; }
+        //public object AssetLink { get; set; }
 
         public bool writepage
         {

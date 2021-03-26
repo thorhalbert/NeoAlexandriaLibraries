@@ -8,7 +8,7 @@ namespace Tmds.Fuse
     {
         internal const string Fusermount = "fusermount3";
 
-        public static IFuseMount Mount(string mountPoint, IFuseFileSystem fileSystem, MountOptions options = null)
+        public static IFuseMount Mount(string mountPoint, IFuseFileSystem fileSystem, MountOptions options = null, string[] Arguments = null)
         {
             if (options == null)
             {
@@ -16,7 +16,7 @@ namespace Tmds.Fuse
             }
 
             FuseMount mount = new FuseMount(mountPoint, fileSystem, options);
-            mount.Mount();
+            mount.Mount(Arguments);
             return mount;
         }
 

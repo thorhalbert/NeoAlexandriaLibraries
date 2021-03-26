@@ -9,7 +9,7 @@ using VDS.Common.Tries;
 
 namespace Linux_FuseFilesystem
 {
-    class MountPoint
+    public class MountPoint
     {
         public byte[] Name;
         public byte[] MountFrom;
@@ -54,7 +54,12 @@ namespace Linux_FuseFilesystem
         Dictionary<byte[], MountPoint> mapSys = new Dictionary<byte[], MountPoint>();
         readonly Trie<byte[], byte, MountPoint> mountTrie = new Trie<byte[], byte, MountPoint>(KeyMapper);
         FuseMountableBase defaultLayer;
-        bool debug = true;
+        bool debug = false;
+
+        public Dictionary<byte[], MountPoint> MapSys { get => mapSys; set => mapSys = value; }
+
+
+        Dictionary<ulong, FileContext> FileContexts = new Dictionary<ulong, FileContext>();
 
         public NarpMirror_MountDispatch(FuseMountableBase defLayer)
         {
@@ -88,9 +93,9 @@ namespace Linux_FuseFilesystem
             var n = name.ToArray();
                  
             // See if the mountpoint changed - maybe just need to update mountTo
-            if (mapSys.ContainsKey(n))
+            if (MapSys.ContainsKey(n))
             {
-                var map = mapSys[n];
+                var map = MapSys[n];
 
                 mountTrie.Remove(map.MountFrom);
                 map.Remount(mountFrom, mountTo, fsys);
@@ -99,9 +104,11 @@ namespace Linux_FuseFilesystem
             }
 
             var mountPoint = new MountPoint(name, mountFrom, mountTo, fsys);
-            mapSys.Add(mountPoint.Name, mountPoint);
+            MapSys.Add(mountPoint.Name, mountPoint);
 
             mountTrie.Add(mountFrom.ToArray(), mountPoint);
+
+            fsys.FileContexts = FileContexts;   // Get our context
         }
 
         public static IEnumerable<byte> KeyMapper(byte[] key)
@@ -109,12 +116,13 @@ namespace Linux_FuseFilesystem
             return key;
         }
 
-        public ReadOnlySpan<byte> DispatchOn(ReadOnlySpan<byte> path, out FuseFileSystemBase fsys, ref FuseFileInfo fi)
+        public ReadOnlySpan<byte> DispatchOn(ReadOnlySpan<byte> path, out FuseMountableBase fsys, ref FuseFileInfo fi, out Guid fileId)
         {
-            fsys = this;
+            fsys = null;
 
             if (debug)
                 Console.WriteLine($"InPath: {RawDirs.HR(path)}");
+
 
             // Surely we can do something better with these spans
 
@@ -126,7 +134,7 @@ namespace Linux_FuseFilesystem
             realPath.AddRange(byteA);
 
             var fileuuid = GuidUtility.Create(GuidUtility.UrlNamespace, realPath.ToArray());
-            fi.ExtFileHandle = fileuuid;
+            fileId = fileuuid;
 
             // normalize(inPath);
 
@@ -174,32 +182,39 @@ namespace Linux_FuseFilesystem
         {
             if (debug) Console.WriteLine($"Mount::OpenDir()");
 
-            var usePath = DispatchOn(path, out var fs, ref fi);
+            var usePath = DispatchOn(path, out var fs, ref fi, out var fileGuid);
             if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.OpenDir(usePath, ref fi);
+            return fs.OpenDir(usePath, ref fi, fileGuid);
         }
         public override int ReadDir(ReadOnlySpan<byte> path, ulong offset, ReadDirFlags flags, DirectoryContent content, ref FuseFileInfo fi)
         {
             if (debug) Console.WriteLine($"Mount::ReadDir()");
 
-            var usePath = DispatchOn(path, out var fs, ref fi);
-            if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.ReadDir(usePath, offset, flags, content, ref fi);
+            try
+            {
+                var usePath = DispatchOn(path, out var fs, ref fi, out var fileGuid);
+                if (usePath.Length < 1) return -LibC.ENOENT;
+                return fs.ReadDir(usePath, offset, flags, content, ref fi, fileGuid);
+            }catch(Exception ex)
+            {
+                Console.WriteLine($"Mount::ReadDir() - error {ex.Message}");
+                return -LibC.EACCES;
+            }
         }
         public override int ReleaseDir(ReadOnlySpan<byte> path, ref FuseFileInfo fi)
         {
             if (debug) Console.WriteLine($"Mount::ReleaseDir()");
 
-            var usePath = DispatchOn(path, out var fs, ref fi);
-            return fs.ReleaseDir(usePath, ref fi);
+            var usePath = DispatchOn(path, out var fs, ref fi, out var fileGuid);
+            return fs.ReleaseDir(usePath, ref fi, fileGuid);
         }
         public override int FSyncDir(ReadOnlySpan<byte> readOnlySpan, bool onlyData, ref FuseFileInfo fi)
         {
             if (debug) Console.WriteLine($"Mount::FSyncDir()");
 
-            var usePath = DispatchOn(readOnlySpan, out var fs, ref fi);
+            var usePath = DispatchOn(readOnlySpan, out var fs, ref fi, out var fileGuid);
             if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.FSyncDir(usePath, onlyData, ref fi);
+            return fs.FSyncDir(usePath, onlyData, ref fi, fileGuid);
         }
 
         // File read
@@ -208,33 +223,33 @@ namespace Linux_FuseFilesystem
         {
             if (debug) Console.WriteLine($"Mount::Open()");
 
-            var usePath = DispatchOn(path, out var fs, ref fi);
+            var usePath = DispatchOn(path, out var fs, ref fi, out var fileGuid);
             if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.Open(usePath, ref fi);
+            return fs.Open(usePath, ref fi, fileGuid);
         }
         public override int Read(ReadOnlySpan<byte> path, ulong offset, Span<byte> buffer, ref FuseFileInfo fi)
         {
             if (debug) Console.WriteLine($"Mount::Read()");
 
-            var usePath = DispatchOn(path, out var fs, ref  fi);
+            var usePath = DispatchOn(path, out var fs, ref  fi, out var fileGuid);
             if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.Read(usePath, offset, buffer, ref fi);
+            return fs.Read(usePath, offset, buffer, ref fi, fileGuid);
         }
         public override void Release(ReadOnlySpan<byte> path, ref FuseFileInfo fi)
         {
             if (debug) Console.WriteLine($"Mount::Release()");
 
-            var usePath = DispatchOn(path, out var fs,ref fi);
+            var usePath = DispatchOn(path, out var fs,ref fi, out var fileGuid);
             if (usePath.Length < 1) return;
-            fs.Release(usePath, ref fi);
+            fs.Release(usePath, ref fi, fileGuid);
         }
         public override int FSync(ReadOnlySpan<byte> path, ref FuseFileInfo fi)
         {
             if (debug) Console.WriteLine($"Mount::FSync()");
 
-            var usePath = DispatchOn(path, out var fs,ref fi);
+            var usePath = DispatchOn(path, out var fs,ref fi, out var fileGuid);
             if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.FSync(usePath, ref fi);
+            return fs.FSync(usePath, ref fi, fileGuid);
         }
 
         // Metadata read
@@ -243,9 +258,9 @@ namespace Linux_FuseFilesystem
             if (debug) Console.WriteLine($"Mount::Access()");
 
             FuseFileInfo fi =new FuseFileInfo();
-            var usePath = DispatchOn(path, out var fs, ref fi);
+            var usePath = DispatchOn(path, out var fs, ref fi, out var fileGuid);
             if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.Access(usePath, mode);
+            return fs.Access(usePath, mode, fileGuid);
         }
         public override int GetAttr(ReadOnlySpan<byte> path, ref stat stat, FuseFileInfoRef fiRef)
         {
@@ -259,9 +274,9 @@ namespace Linux_FuseFilesystem
                     fiRef = new FuseFileInfoRef(new Span<FuseFileInfo>(new FuseFileInfo[] { fi }));
                 }
               
-                var usePath = DispatchOn(path, out var fs, ref fiRef.Value);
+                var usePath = DispatchOn(path, out var fs, ref fiRef.Value,  out var fileGuid);
                 if (usePath.Length < 1) return -LibC.ENOENT;
-                return fs.GetAttr(usePath, ref stat, fiRef);
+                return fs.GetAttr(usePath, ref stat, fiRef, fileGuid);
             }
             catch(Exception ex)
             {
@@ -274,27 +289,28 @@ namespace Linux_FuseFilesystem
             if (debug) Console.WriteLine($"Mount::ReadLink({RawDirs.HR(path)}");
 
             FuseFileInfo fi = new FuseFileInfo();
-            var usePath = DispatchOn(path, out var fs,ref fi);
+            var usePath = DispatchOn(path, out var fs,ref fi, out var fileGuid);
             if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.ReadLink(usePath, buffer);
+            return fs.ReadLink(usePath, buffer, fileGuid);
         }
         public override int GetXAttr(ReadOnlySpan<byte> path, ReadOnlySpan<byte> name, Span<byte> data)
         {
             if (debug) Console.WriteLine($"Mount::GetXAttr()");
+            return -LibC.ENOSYS;
 
             FuseFileInfo fi = new FuseFileInfo();
-            var usePath = DispatchOn(path, out var fs, ref fi);
+            var usePath = DispatchOn(path, out var fs, ref fi, out var fileGuid);
             if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.GetXAttr(usePath, name, data);
+            return fs.GetXAttr(usePath, name, data, fileGuid);
         }
         public override int ListXAttr(ReadOnlySpan<byte> path, Span<byte> list)
         {
             if (debug) Console.WriteLine($"Mount::ListXAttr()");
 
             FuseFileInfo fi = new FuseFileInfo();
-            var usePath = DispatchOn(path, out var fs,ref fi);
+            var usePath = DispatchOn(path, out var fs,ref fi, out var fileGuid);
             if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.ListXAttr(usePath, list);
+            return fs.ListXAttr(usePath, list, fileGuid);
         }
         // Write
         public override int Create(ReadOnlySpan<byte> path, mode_t mode, ref FuseFileInfo fi)
@@ -302,41 +318,41 @@ namespace Linux_FuseFilesystem
             if (debug) Console.WriteLine($"Mount::Create()");
 
 
-            var usePath = DispatchOn(path, out var fs, ref fi);
+            var usePath = DispatchOn(path, out var fs, ref fi, out var fileGuid);
             if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.Create(usePath, mode, ref fi);
+            return fs.Create(usePath, mode, ref fi,fileGuid );
         }
         public override int Write(ReadOnlySpan<byte> path, ulong off, ReadOnlySpan<byte> span, ref FuseFileInfo fi)
         {
             if (debug) Console.WriteLine($"Mount::Write()");
 
-            var usePath = DispatchOn(path, out var fs,ref fi);
+            var usePath = DispatchOn(path, out var fs,ref fi, out var fileGuid);
             if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.Write(usePath, off, span, ref fi);
+            return fs.Write(usePath, off, span, ref fi, fileGuid);
         }
         public override int Flush(ReadOnlySpan<byte> path, ref FuseFileInfo fi)
         {
             if (debug) Console.WriteLine($"Mount::Flush()");
 
-            var usePath = DispatchOn(path, out var fs,ref fi);
+            var usePath = DispatchOn(path, out var fs,ref fi, out var fileGuid);
             if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.Flush(usePath, ref fi);
+            return fs.Flush(usePath, ref fi, fileGuid);
         }
         public override int FAllocate(ReadOnlySpan<byte> path, int mode, ulong offset, long length, ref FuseFileInfo fi)
         {
             if (debug) Console.WriteLine($"Mount::FAllocate()");
 
-            var usePath = DispatchOn(path, out var fs,ref fi);
+            var usePath = DispatchOn(path, out var fs,ref fi, out var fileGuid);
             if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.FAllocate(usePath, mode, offset, length, ref fi);
+            return fs.FAllocate(usePath, mode, offset, length, ref fi, fileGuid);
         }
         public override int Truncate(ReadOnlySpan<byte> path, ulong length, FuseFileInfoRef fiRef)
         {
             if (debug) Console.WriteLine($"Mount::Truncate()");
 
-            var usePath = DispatchOn(path, out var fs, ref fiRef.Value);
+            var usePath = DispatchOn(path, out var fs, ref fiRef.Value,  out var fileGuid);
             if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.Truncate(usePath, length, fiRef);
+            return fs.Truncate(usePath, length, fiRef, fileGuid);
         }
         // Set metadata
         public override int ChMod(ReadOnlySpan<byte> path, mode_t mode, FuseFileInfoRef fiRef)
@@ -344,63 +360,63 @@ namespace Linux_FuseFilesystem
             if (debug) Console.WriteLine($"Mount::ChMod()");
 
             FuseFileInfo fi = new FuseFileInfo();
-            var usePath = DispatchOn(path, out var fs, ref fi);
+            var usePath = DispatchOn(path, out var fs, ref fi, out var fileGuid);
             if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.ChMod(usePath, mode, fiRef);
+            return fs.ChMod(usePath, mode, fiRef, fileGuid);
         }
         public override int Chown(ReadOnlySpan<byte> path, uint uid, uint gid, FuseFileInfoRef fiRef)
         {
             if (debug) Console.WriteLine($"Mount::Chown()");
 
             FuseFileInfo fi = new FuseFileInfo();
-            var usePath = DispatchOn(path, out var fs,ref fi);
+            var usePath = DispatchOn(path, out var fs,ref fi, out var fileGuid);
             if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.Chown(usePath, uid, gid, fiRef);
+            return fs.Chown(usePath, uid, gid, fiRef, fileGuid);
         }
         public override int Link(ReadOnlySpan<byte> fromPath, ReadOnlySpan<byte> toPath)
         {
             if (debug) Console.WriteLine($"Mount::Link()");
 
             FuseFileInfo fi = new FuseFileInfo();
-            var usePath = DispatchOn(fromPath, out var fs, ref fi);
+            var usePath = DispatchOn(fromPath, out var fs, ref fi, out var fileGuid);
             if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.Link(usePath, toPath);
+            return fs.Link(usePath, toPath, fileGuid);
         }
         public override int SetXAttr(ReadOnlySpan<byte> path, ReadOnlySpan<byte> name, ReadOnlySpan<byte> data, int flags)
         {
             if (debug) Console.WriteLine($"Mount::SetXAttr()");
 
             FuseFileInfo fi = new FuseFileInfo();
-            var usePath = DispatchOn(path, out var fs,ref  fi);
+            var usePath = DispatchOn(path, out var fs,ref  fi, out var fileGuid);
             if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.SetXAttr(usePath, name, data, flags);
+            return fs.SetXAttr(usePath, name, data, flags, fileGuid);
         }
         public override int RemoveXAttr(ReadOnlySpan<byte> path, ReadOnlySpan<byte> name)
         {
             if (debug) Console.WriteLine($"Mount::RemoveXAttr()");
 
             FuseFileInfo fi = new FuseFileInfo();
-            var usePath = DispatchOn(path, out var fs, ref fi);
+            var usePath = DispatchOn(path, out var fs, ref fi, out var fileGuid);
             if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.RemoveXAttr(usePath, name);
+            return fs.RemoveXAttr(usePath, name, fileGuid);
         }
         public override int SymLink(ReadOnlySpan<byte> path, ReadOnlySpan<byte> target)
         {
             if (debug) Console.WriteLine($"Mount::SymLink()");
 
             FuseFileInfo fi = new FuseFileInfo();
-            var usePath = DispatchOn(path, out var fs, ref fi);
+            var usePath = DispatchOn(path, out var fs, ref fi, out var fileGuid);
             if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.SymLink(usePath, target);
+            return fs.SymLink(usePath, target, fileGuid);
         }
         public override int UpdateTimestamps(ReadOnlySpan<byte> path, ref timespec atime, ref timespec mtime, FuseFileInfoRef fiRef)
         {
             if (debug) Console.WriteLine($"Mount::UpdateTimestamps()");
 
             FuseFileInfo fi = new FuseFileInfo();
-            var usePath = DispatchOn(path, out var fs,ref fi);
+            var usePath = DispatchOn(path, out var fs,ref fi, out var fileGuid);
             if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.UpdateTimestamps(usePath, ref atime, ref mtime, fiRef);
+            return fs.UpdateTimestamps(usePath, ref atime, ref mtime, fiRef, fileGuid);
         }
 
         // Write directory metadata
@@ -409,36 +425,36 @@ namespace Linux_FuseFilesystem
             if (debug) Console.WriteLine($"Mount::MkDir()");
 
             FuseFileInfo fi = new FuseFileInfo();
-            var usePath = DispatchOn(path, out var fs, ref fi);
+            var usePath = DispatchOn(path, out var fs, ref fi, out var fileGuid);
             if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.MkDir(usePath, mode);
+            return fs.MkDir(usePath, mode, fileGuid);
         }
         public override int Rename(ReadOnlySpan<byte> path, ReadOnlySpan<byte> newPath, int flags)
         {
             if (debug) Console.WriteLine($"Mount::Rename()");
 
             FuseFileInfo fi = new FuseFileInfo();
-            var usePath = DispatchOn(path, out var fs,ref fi);
+            var usePath = DispatchOn(path, out var fs,ref fi, out var fileGuid);
             if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.Rename(usePath, newPath, flags);
+            return fs.Rename(usePath, newPath, flags, fileGuid);
         }
         public override int RmDir(ReadOnlySpan<byte> path)
         {
             if (debug) Console.WriteLine($"Mount::RmDir()");
 
             FuseFileInfo fi = new FuseFileInfo();
-            var usePath = DispatchOn(path, out var fs, ref fi);
+            var usePath = DispatchOn(path, out var fs, ref fi, out var fileGuid);
             if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.RmDir(usePath);
+            return fs.RmDir(usePath, fileGuid);
         }
         public override int Unlink(ReadOnlySpan<byte> path)
         {
             if (debug) Console.WriteLine($"Mount::Unlink()");
 
             FuseFileInfo fi = new FuseFileInfo();
-            var usePath = DispatchOn(path, out var fs, ref fi);
+            var usePath = DispatchOn(path, out var fs, ref fi, out var fileGuid);
             if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.Unlink(usePath);
+            return fs.Unlink(usePath , fileGuid);
         }
 
         // Filesystem level 
@@ -447,9 +463,9 @@ namespace Linux_FuseFilesystem
             if (debug) Console.WriteLine($"Mount::StatFS()");
 
             FuseFileInfo fi = new FuseFileInfo();
-            var usePath = DispatchOn(path, out var fs, ref fi);
+            var usePath = DispatchOn(path, out var fs, ref fi, out var fileGuid);
             if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.StatFS(usePath, ref statfs);
+            return fs.StatFS(usePath, ref statfs, fileGuid);
         }
     }
 }

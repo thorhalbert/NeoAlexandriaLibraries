@@ -21,15 +21,15 @@ namespace NeoRepositories.Mongo
         [BsonRequired] public string SHA1 { get; set; } // 2000000/2000000
         [BsonRequired] public bool Deleted { get; set; }   // 1949584/2000000
         [BsonRequired] public UInt32 Version { get; set; } // 1939688/2000000
-        [BsonRequired] public BsonDocument Tenants { get; set; } // 1937224/2000000
-        [BsonRequired] public bool Annealed { get; set; }  // 1936260/2000000
-        [BsonRequired] public double LastSeen { get; set; }    // 1936260/2000000
-        [BsonRequired] public string Parent { get; set; }   // 1936260/2000000
-        [BsonRequired] public Byte[] PathPhys { get; set; }    // 1936260/2000000
-        [BsonRequired] public string Repo { get; set; } // 1936260/2000000
-        [BsonRequired] public string RepoType { get; set; } // 1936260/2000000
-        [BsonRequired] public AssetFiles_Stat Stat { get; set; }    // 1936260/2000000
-        [BsonRequired] public string StateUUID { get; set; }    // 1936260/2000000
+        [BsonIgnoreIfNull] public BsonDocument Tenants { get; set; } // 1937224/2000000
+        [BsonIgnoreIfNull] public bool Annealed { get; set; }  // 1936260/2000000
+        [BsonIgnoreIfNull] public double LastSeen { get; set; }    // 1936260/2000000
+        [BsonIgnoreIfNull] public string Parent { get; set; }   // 1936260/2000000
+        [BsonIgnoreIfNull] public Byte[] PathPhys { get; set; }    // 1936260/2000000
+        [BsonIgnoreIfNull] public string Repo { get; set; } // 1936260/2000000
+        [BsonIgnoreIfNull] public string RepoType { get; set; } // 1936260/2000000
+        [BsonIgnoreIfNull] public AssetFiles_Stat Stat { get; set; }    // 1936260/2000000
+        [BsonIgnoreIfNull] public string StateUUID { get; set; }    // 1936260/2000000
         [BsonIgnoreIfNull] public string DirId { get; set; }    // 1868874/2000000
         [BsonIgnoreIfNull] public string NARP { get; set; } // 1862818/2000000
         //[BsonIgnoreIfNull] public BsonDocument Owners { get; set; } // 763544/2000000

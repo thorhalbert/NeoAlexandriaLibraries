@@ -11,13 +11,15 @@ using Tmds.Linux;
 
 namespace Linux_FuseFilesystem
 {
-    public class FuseMountableBase : FuseFileSystemBase
+    public class FuseMountableBase
     {
         private IMongoCollection<AssetFiles> assetFiles = null;
         private IMongoCollection<BakedAssets> bakedAssets;
         private IMongoCollection<BakedVolumes> bakedVolumes;
 
-        protected bool debug = true;
+        protected bool debug = false;
+
+        public Dictionary<ulong, FileContext> FileContexts { get; set; }
 
 
         public FuseMountableBase()
@@ -45,33 +47,34 @@ namespace Linux_FuseFilesystem
         }
 
 
-        public override int GetXAttr(ReadOnlySpan<byte> path, ReadOnlySpan<byte> name, Span<byte> data)
+        public virtual int GetXAttr(ReadOnlySpan<byte> path, ReadOnlySpan<byte> name, Span<byte> data, Guid fileGuid)
         {
             path = TransformPath(path);
 
             if (debug) Console.WriteLine($"NeoFS::GetXAttr()");
-            return base.GetXAttr(path, name, data);
+
+            return -LibC.ENOSYS;
         }
-        public override int ListXAttr(ReadOnlySpan<byte> path, Span<byte> list)
+        public virtual int ListXAttr(ReadOnlySpan<byte> path, Span<byte> list, Guid fileGuid)
         {
             path = TransformPath(path);
 
             if (debug) Console.WriteLine($"NeoFS::ListXAttr()");
-            return base.ListXAttr(path, list);
+            return -LibC.ENOSYS;
         }
-        public override int SetXAttr(ReadOnlySpan<byte> path, ReadOnlySpan<byte> name, ReadOnlySpan<byte> data, int flags)
+        public virtual int SetXAttr(ReadOnlySpan<byte> path, ReadOnlySpan<byte> name, ReadOnlySpan<byte> data, int flags, Guid fileGuid)
         {
             path = TransformPath(path);
 
             if (debug) Console.WriteLine($"NeoFS::SetXAttr()");
-            return base.SetXAttr(path, name, data, flags);
+            return -LibC.ENOSYS;
         }
-        public override int RemoveXAttr(ReadOnlySpan<byte> path, ReadOnlySpan<byte> name)
+        public virtual int RemoveXAttr(ReadOnlySpan<byte> path, ReadOnlySpan<byte> name, Guid fileGuid)
         {
             path = TransformPath(path);
 
             if (debug) Console.WriteLine($"NeoFS::RemoveXAttr()");
-            return base.RemoveXAttr(path, name);
+            return -LibC.ENOSYS;
         }
 
         internal void GetAssetAttr(ReadOnlySpan<byte> path, Span<byte> link, ref stat stat, Guid fileuuid)
@@ -130,6 +133,7 @@ namespace Linux_FuseFilesystem
                     tv_nsec = 0
                 };
 
+                if (debug) Console.WriteLine($"Stat Asset Dump: size={stat.st_size}, mode={stat.st_mode}, mtim={stat.st_mtim}");
                 if (debug) Console.WriteLine($"Return stat for: {fileuuid.ToString().ToLower()}");
 
                 return;
@@ -138,33 +142,146 @@ namespace Linux_FuseFilesystem
             Console.WriteLine($"Can't find AssetFile: {fileuuid.ToString().ToLower()}");
         }
 
-        internal int AssetOpen(ReadOnlySpan<byte> path, ref FuseFileInfo fi)
+        internal int AssetOpen(ReadOnlySpan<byte> path, ref FuseFileInfo fi, Guid fileGuid)
         {
-            // Lazy load these, but just once
-            if (bakedAssets == null)
-                bakedAssets = NeoMongo.NeoDb.BakedAssets();
-            if (bakedVolumes == null)
-                bakedVolumes = NeoMongo.NeoDb.BakedVolumes();
+            if (FileContexts.TryGetValue(fi.fh, out var context))
+            {
 
-            // "Open" the file -- mostly just setup
-            var assetLink = new AssetFileSystem.File.UnbakeForFuse(NeoMongo.NeoDb, bakedAssets, bakedVolumes, fi.ExtAssetSha1);          
-            fi.AssetLink = assetLink;  // Save in file context -- mostly needed by read
+                // Lazy load these, but just once
+                if (bakedAssets == null)
+                    bakedAssets = NeoMongo.NeoDb.BakedAssets();
+                if (bakedVolumes == null)
+                    bakedVolumes = NeoMongo.NeoDb.BakedVolumes();
 
-            return 1;   // Fake file handle - nothing should refer to it or use it
+                // "Open" the file -- mostly just setup
+                var assetLink = new AssetFileSystem.File.UnbakeForFuse(NeoMongo.NeoDb, bakedAssets, bakedVolumes, context.ExtAssetSha1);
+                context.AssetLink = assetLink;  // Save in file context -- mostly needed by read
+                Console.WriteLine($"Attach AssetLink to {fi.fh}");
+
+                return 0;  // No error
+            }
+            else
+                Console.WriteLine($"AssetOpen no context?  fh={fi.fh}");
+            return 0;
         }
-        internal int AssetRead(ReadOnlySpan<byte> path, ulong offset, Span<byte> buffer, ref FuseFileInfo fi)
+        internal int AssetRead(ReadOnlySpan<byte> path, ulong offset, Span<byte> buffer, ref FuseFileInfo fi, Guid fileGuid)
         {
-            var assetLink = (AssetFileSystem.File.UnbakeForFuse) fi.AssetLink;
-            return assetLink.Read(offset, buffer);
+            if (FileContexts.TryGetValue(fi.fh, out var context))
+            {
+                var assetLink = context.AssetLink;
+                return assetLink.Read(offset, buffer);
+            }
+            else
+                Console.WriteLine($"AssetRead no context?  fh={fi.fh}");
+            return 0;
         }
-        internal void AssetRelease(ReadOnlySpan<byte> path, ref FuseFileInfo fi)
+        internal void AssetRelease(ReadOnlySpan<byte> path, ref FuseFileInfo fi, Guid fileGuid)
         {
-            var assetLink = (AssetFileSystem.File.UnbakeForFuse) fi.AssetLink;
-            assetLink.Release();   // Internally clear buffers and such
-
-            fi.AssetLink = null;  // Let this go out of scope
-            fi.ExtAssetSha1 = null;
+            if (FileContexts.TryGetValue(fi.fh, out var context))
+            {
+                if (context.AssetLink!=null)
+                {
+                    var assetLink = context.AssetLink;
+                    assetLink.Release();   // Internally clear buffers and such
+                }
+                else
+                {
+                    Console.WriteLine($"AssetLink is null? {RawDirs.HR(path)}");
+                }
+                context.AssetLink = null;  // Let this go out of scope
+                context.ExtAssetSha1 = null;
+            }
+            else
+                Console.WriteLine($"AssetRelease no context?  fh={fi.fh}");
         }
 
+
+
+
+        public virtual int Access(ReadOnlySpan<byte> path, mode_t mode, Guid fileGuid)
+          => -LibC.ENOSYS;
+
+        public virtual int ChMod(ReadOnlySpan<byte> path, mode_t mode, FuseFileInfoRef fiRef, Guid fileGuid)
+            => -LibC.ENOSYS;
+
+        public virtual int Chown(ReadOnlySpan<byte> path, uint uid, uint gid, FuseFileInfoRef fiRef, Guid fileGuid)
+            => -LibC.ENOSYS;
+
+        public virtual int Create(ReadOnlySpan<byte> path, mode_t mode, ref FuseFileInfo fi, Guid fileGuid)
+            => -LibC.ENOSYS;
+
+        public virtual void Dispose()
+        { }
+
+        public virtual int FAllocate(ReadOnlySpan<byte> path, int mode, ulong offset, long length, ref FuseFileInfo fi, Guid fileGuid)
+            => -LibC.ENOSYS;
+
+        public virtual int Flush(ReadOnlySpan<byte> path, ref FuseFileInfo fi, Guid fileGuid)
+            => -LibC.ENOSYS;
+
+        public virtual int FSync(ReadOnlySpan<byte> path, ref FuseFileInfo fi, Guid fileGuid)
+            => -LibC.ENOSYS;
+
+        public virtual int FSyncDir(ReadOnlySpan<byte> readOnlySpan, bool onlyData, ref FuseFileInfo fi, Guid fileGuid)
+            => -LibC.ENOSYS;
+
+        public virtual int GetAttr(ReadOnlySpan<byte> path, ref stat stat, FuseFileInfoRef fiRef, Guid fileGuid)
+            => -LibC.ENOSYS;
+
+
+
+        public virtual int Link(ReadOnlySpan<byte> fromPath, ReadOnlySpan<byte> toPath, Guid fileGuid)
+            => -LibC.ENOSYS;
+
+
+
+        public virtual int MkDir(ReadOnlySpan<byte> path, mode_t mode, Guid fileGuid)
+            => -LibC.ENOSYS;
+
+        public virtual int Open(ReadOnlySpan<byte> path, ref FuseFileInfo fi, Guid fileGuid)
+            => -LibC.ENOSYS;
+
+        public virtual int OpenDir(ReadOnlySpan<byte> path, ref FuseFileInfo fi, Guid fileGuid)
+            => 0;
+
+        public virtual int Read(ReadOnlySpan<byte> path, ulong offset, Span<byte> buffer, ref FuseFileInfo fi, Guid fileGuid)
+            => -LibC.ENOSYS;
+
+        public virtual int ReadDir(ReadOnlySpan<byte> path, ulong offset, ReadDirFlags flags, DirectoryContent content, ref FuseFileInfo fi, Guid fileGuid)
+            => -LibC.ENOSYS;
+
+        public virtual int ReadLink(ReadOnlySpan<byte> path, Span<byte> buffer, Guid fileGuid)
+            => -LibC.ENOSYS;
+
+        public virtual void Release(ReadOnlySpan<byte> path, ref FuseFileInfo fi, Guid fileGuid)
+        { }
+
+        public virtual int ReleaseDir(ReadOnlySpan<byte> path, ref FuseFileInfo fi, Guid fileGuid)
+            => -LibC.ENOSYS;
+
+
+        public virtual int Rename(ReadOnlySpan<byte> path, ReadOnlySpan<byte> newPath, int flags, Guid fileGuid)
+            => -LibC.ENOSYS;
+
+        public virtual int RmDir(ReadOnlySpan<byte> path, Guid fileGuid)
+            => -LibC.ENOSYS;
+
+        public virtual int StatFS(ReadOnlySpan<byte> path, ref statvfs statfs, Guid fileGuid)
+            => -LibC.ENOSYS;
+
+        public virtual int SymLink(ReadOnlySpan<byte> path, ReadOnlySpan<byte> target, Guid fileGuid)
+            => -LibC.ENOSYS;
+
+        public virtual int Truncate(ReadOnlySpan<byte> path, ulong length, FuseFileInfoRef fiRef, Guid fileGuid)
+            => -LibC.ENOSYS;
+
+        public virtual int Unlink(ReadOnlySpan<byte> path, Guid fileGuid)
+            => -LibC.ENOSYS;
+
+        public virtual int UpdateTimestamps(ReadOnlySpan<byte> path, ref timespec atime, ref timespec mtime, FuseFileInfoRef fiRef, Guid fileGuid)
+            => -LibC.ENOSYS;
+
+        public virtual int Write(ReadOnlySpan<byte> path, ulong off, ReadOnlySpan<byte> span, ref FuseFileInfo fi, Guid fileGuid)
+            => -LibC.ENOSYS;
     }
 }

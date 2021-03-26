@@ -14,37 +14,39 @@ namespace Linux_FuseFilesystem
 
         readonly byte[] assetTag = Encoding.ASCII.GetBytes("/NEOASSET/sha1/");
 
+        readonly byte[] fakeFile = Encoding.ASCII.GetBytes("/dev/null");
 
         public NarpMirror_Fuse()
         {
-            base.debug = true;
+            base.debug = false;
 
             if (debug) Console.WriteLine($"NeoFS::NarpMirror_Fuse() constructor");
-            //SupportsMultiThreading = true;
-
+            //SupportsMultiThreading = false;   
         }
 
-        public override bool SupportsMultiThreading => false;
+        //public override bool SupportsMultiThreading => false;
 
         // File read directories
-        public override int OpenDir(ReadOnlySpan<byte> path, ref FuseFileInfo fi)
+        public override int OpenDir(ReadOnlySpan<byte> path, ref FuseFileInfo fi, Guid fileGuid)
         {
-            path = base.TransformPath(path);
 
             if (debug) Console.WriteLine($"NeoFS::OpenDir({RawDirs.HR(path)})");
+            //path = base.TransformPath(path);
             return 0;
         }
-        public override int ReadDir(ReadOnlySpan<byte> path, ulong offset, ReadDirFlags flags, DirectoryContent content, ref FuseFileInfo fi)
+        public override int ReadDir(ReadOnlySpan<byte> path, ulong offset, ReadDirFlags flags, DirectoryContent content, ref FuseFileInfo fi, Guid fileGuid)
         {
-            path = base.TransformPath(path);
-
             if (debug) Console.WriteLine($"NeoFS::ReadDir({RawDirs.HR(path)},{offset},{flags})");
+            path = base.TransformPath(path);
 
             // We only have the low level calls, so we need to do opendir/readdir ourself
 
             var dirFd = RawDirs.opendir(RawDirs.ToNullTerm(path.ToArray()));
             if (dirFd == IntPtr.Zero)
                 return 0;
+
+            content.AddEntry(".");  // This can eat strings
+            content.AddEntry("..");
 
             while (true)
             {
@@ -62,14 +64,13 @@ namespace Linux_FuseFilesystem
 
             return 0;
         }
-        public override int ReleaseDir(ReadOnlySpan<byte> path, ref FuseFileInfo fi)
+        public override int ReleaseDir(ReadOnlySpan<byte> path, ref FuseFileInfo fi, Guid fileGuid)
         {
-            path = base.TransformPath(path);
-
             if (debug) Console.WriteLine($"NeoFS::ReleaseDir({RawDirs.HR(path)})");
+            path = base.TransformPath(path);
             return 0;
         }
-        public override int FSyncDir(ReadOnlySpan<byte> path, bool onlyData, ref FuseFileInfo fi)
+        public override int FSyncDir(ReadOnlySpan<byte> path, bool onlyData, ref FuseFileInfo fi, Guid fileGuid)
         {
             path = base.TransformPath(path);
 
@@ -82,7 +83,7 @@ namespace Linux_FuseFilesystem
 
         // File read
 
-        public override int Open(ReadOnlySpan<byte> path, ref FuseFileInfo fi)
+        public override int Open(ReadOnlySpan<byte> path, ref FuseFileInfo fi, Guid fileGuid)
         {
             path = base.TransformPath(path);
             if (path.Length < 1) return -LibC.ENOENT;
@@ -92,11 +93,13 @@ namespace Linux_FuseFilesystem
             // Stat the file
 
             var stat = new stat();
-    
-                var lc = LibC.lstat(toBp(path), &stat);
-                if (lc < 0)
-                    return -LibC.errno;
-         
+
+            var lc = LibC.lstat(toBp(path), &stat);
+            if (lc < 0)
+                return -LibC.errno;
+
+            string extAssetSha1 = null;
+
             // Intercept an asset - we must provide the asset's Attr, not the link of the baked file
             if ((stat.st_mode & LibC.S_IFMT) == LibC.S_IFLNK)
             {
@@ -118,12 +121,11 @@ namespace Linux_FuseFilesystem
 
                 if (link.SequenceEqual(assetTag))
                 {
-
                     link = MemoryExtensions.AsSpan<byte>(buffer, 0, (int) retl);
                     if (debug) Console.WriteLine($"Found ASSET {RawDirs.HR(link)}");
 
                     var asset = link.Slice(assetTag.Length);
-                    fi.ExtAssetSha1 = Encoding.ASCII.GetString(asset);
+                    extAssetSha1 = Encoding.ASCII.GetString(asset);
                 }
                 else
                 {
@@ -133,12 +135,28 @@ namespace Linux_FuseFilesystem
                     // Probably a dependancy injection
                     // These links shouldn't happen, but it would be a nice attack vector
                 }
-            } 
+            }
 
             // See if asset -- if so, set to asset mode and call base
 
-            if (fi.ExtAssetSha1 != null)  // Asset Mode
-                return base.AssetOpen(path, ref fi);
+            if (extAssetSha1 != null)  // Asset Mode
+            {
+                var fakeFd = LibC.open(toBp(fakeFile), 0);
+                if (fakeFd > 0)
+                {
+                    fi.fh = (ulong) fakeFd;
+                    FileContexts.Add(fi.fh, new FileContext
+                    {
+                        AssetLink = null,
+                        ExtAssetSha1 = extAssetSha1,
+                        ExtFileHandle = null,
+                    });
+                    Console.WriteLine($"Create Context (sha1) ID={fi.fh}");
+                }
+                else
+                    Console.WriteLine($"Error Opening /dev/null?  Error={LibC.errno}");
+                return base.AssetOpen(path, ref fi, fileGuid);
+            }
 
             // transform the link
 
@@ -146,19 +164,31 @@ namespace Linux_FuseFilesystem
             if (newFd > 0)
             {
                 fi.fh = (ulong) newFd;
+
+                // Make a context anyway
+                FileContexts.Add(fi.fh, new FileContext
+                {
+                    AssetLink = null,
+                    ExtAssetSha1 = null,
+                    ExtFileHandle = null,
+                });
+                Console.WriteLine($"Create Context (null) ID={fi.fh}");
+
                 return 0;
             }
 
             return -LibC.errno;
         }
-        public override int Read(ReadOnlySpan<byte> path, ulong offset, Span<byte> buffer, ref FuseFileInfo fi)
+        public override int Read(ReadOnlySpan<byte> path, ulong offset, Span<byte> buffer, ref FuseFileInfo fi, Guid fileGuid)
         {
+            var context = FileContexts[fi.fh];
+
             path = base.TransformPath(path);
 
             if (debug) Console.WriteLine($"NeoFS::Read()");
 
-            if (fi.ExtAssetSha1 != null)  // Asset Mode
-                return base.AssetRead(path, offset, buffer, ref fi);
+            if (context.ExtAssetSha1 != null)  // Asset Mode
+                return base.AssetRead(path, offset, buffer, ref fi, fileGuid);
 
             if (fi.fh == 0)
             {
@@ -180,22 +210,25 @@ namespace Linux_FuseFilesystem
             return (int) res;
 
         }
-        public override void Release(ReadOnlySpan<byte> path, ref FuseFileInfo fi)
+        public override void Release(ReadOnlySpan<byte> path, ref FuseFileInfo fi, Guid fileGuid)
         {
             path = base.TransformPath(path);
 
             if (debug) Console.WriteLine($"NeoFS::Release()");
 
-            if (fi.ExtAssetSha1 != null)  // Asset Mode
-                base.AssetRelease(path, ref fi);
-
+            if (FileContexts.TryGetValue(fi.fh, out var context))
+            {
+                if (context.ExtAssetSha1 != null)  // Asset Mode
+                    base.AssetRelease(path, ref fi, fileGuid);
+                FileContexts.Remove(fi.fh);
+            }
 
             if (fi.fh > 0)
                 LibC.close((int) fi.fh);
 
             fi.fh = 0;
         }
-        public override int FSync(ReadOnlySpan<byte> path, ref FuseFileInfo fi)
+        public override int FSync(ReadOnlySpan<byte> path, ref FuseFileInfo fi, Guid fileGuid)
         {
             path = base.TransformPath(path);
 
@@ -204,7 +237,7 @@ namespace Linux_FuseFilesystem
         }
 
         // Metadata read
-        public override int Access(ReadOnlySpan<byte> path, mode_t mode)
+        public override int Access(ReadOnlySpan<byte> path, mode_t mode, Guid fileGuid)
         {
             path = base.TransformPath(path);
 
@@ -217,7 +250,7 @@ namespace Linux_FuseFilesystem
 
             return 0; // base.Access(path, mode);
         }
-        public override int GetAttr(ReadOnlySpan<byte> path, ref stat stat, FuseFileInfoRef fiRef)
+        public override int GetAttr(ReadOnlySpan<byte> path, ref stat stat, FuseFileInfoRef fiRef, Guid fileGuid)
         {
             try
             {
@@ -255,12 +288,13 @@ namespace Linux_FuseFilesystem
                     {
                         link = MemoryExtensions.AsSpan(buffer, 0, (int) retl);
                         if (debug) Console.WriteLine($"Found ASSET {RawDirs.HR(link)}");
-                        var g = Guid.Empty;
-                        if (!fiRef.IsNull && fiRef.Value.ExtFileHandle.HasValue)
-                            g = fiRef.Value.ExtFileHandle.Value;
-                        base.GetAssetAttr(path, link, ref stat, g);
+
+                        base.GetAssetAttr(path, link, ref stat, fileGuid);
+                        return 0;
                     }
                 }
+
+                if (debug) Console.WriteLine($"Stat Dump: size={stat.st_size}, mode={stat.st_mode}, mtim={stat.st_mtim}");
 
                 return 0;
             }
@@ -270,7 +304,7 @@ namespace Linux_FuseFilesystem
                 return -LibC.ENOENT;
             }
         }
-        public override int ReadLink(ReadOnlySpan<byte> path, Span<byte> buffer)
+        public override int ReadLink(ReadOnlySpan<byte> path, Span<byte> buffer, Guid fileGuid)
         {
             path = base.TransformPath(path);
 
@@ -288,7 +322,7 @@ namespace Linux_FuseFilesystem
         }
 
         // Write
-        public override int Create(ReadOnlySpan<byte> path, mode_t mode, ref FuseFileInfo fi)
+        public override int Create(ReadOnlySpan<byte> path, mode_t mode, ref FuseFileInfo fi, Guid fileGuid)
         {
             path = base.TransformPath(path);
 
@@ -304,7 +338,7 @@ namespace Linux_FuseFilesystem
 
             return 0;
         }
-        public override int Write(ReadOnlySpan<byte> path, ulong off, ReadOnlySpan<byte> buffer, ref FuseFileInfo fi)
+        public override int Write(ReadOnlySpan<byte> path, ulong off, ReadOnlySpan<byte> buffer, ref FuseFileInfo fi, Guid fileGuid)
         {
             path = base.TransformPath(path);
 
@@ -328,7 +362,7 @@ namespace Linux_FuseFilesystem
 
             return (int) res;
         }
-        public override int Flush(ReadOnlySpan<byte> path, ref FuseFileInfo fi)
+        public override int Flush(ReadOnlySpan<byte> path, ref FuseFileInfo fi, Guid fileGuid)
         {
             path = base.TransformPath(path);
 
@@ -340,7 +374,7 @@ namespace Linux_FuseFilesystem
 
             return 0; // base.Flush(path, ref fi);
         }
-        public override int FAllocate(ReadOnlySpan<byte> path, int mode, ulong offset, long length, ref FuseFileInfo fi)
+        public override int FAllocate(ReadOnlySpan<byte> path, int mode, ulong offset, long length, ref FuseFileInfo fi, Guid fileGuid)
         {
             path = base.TransformPath(path);
 
@@ -363,7 +397,7 @@ namespace Linux_FuseFilesystem
 
             return (int) res;
         }
-        public override int Truncate(ReadOnlySpan<byte> path, ulong length, FuseFileInfoRef fiRef)
+        public override int Truncate(ReadOnlySpan<byte> path, ulong length, FuseFileInfoRef fiRef, Guid fileGuid)
         {
             path = base.TransformPath(path);
             if (debug) Console.WriteLine($"NeoFS::Truncate()");
@@ -375,7 +409,7 @@ namespace Linux_FuseFilesystem
             return res;
         }
         // Set metadata
-        public override int ChMod(ReadOnlySpan<byte> path, mode_t mode, FuseFileInfoRef fiRef)
+        public override int ChMod(ReadOnlySpan<byte> path, mode_t mode, FuseFileInfoRef fiRef, Guid fileGuid)
         {
             path = base.TransformPath(path);
 
@@ -385,7 +419,7 @@ namespace Linux_FuseFilesystem
             if (res < 0) return -LibC.errno;
             return 0;
         }
-        public override int Chown(ReadOnlySpan<byte> path, uint uid, uint gid, FuseFileInfoRef fiRef)
+        public override int Chown(ReadOnlySpan<byte> path, uint uid, uint gid, FuseFileInfoRef fiRef, Guid fileGuid)
         {
             path = base.TransformPath(path);
 
@@ -394,7 +428,7 @@ namespace Linux_FuseFilesystem
             if (res < 0) return -LibC.errno;
             return 0;
         }
-        public override int Link(ReadOnlySpan<byte> fromPath, ReadOnlySpan<byte> toPath)
+        public override int Link(ReadOnlySpan<byte> fromPath, ReadOnlySpan<byte> toPath, Guid fileGuid)
         {
             if (debug) Console.WriteLine($"NeoFS::Link()");
             fromPath = base.TransformPath(fromPath);
@@ -407,7 +441,7 @@ namespace Linux_FuseFilesystem
             return res;
         }
 
-        public override int SymLink(ReadOnlySpan<byte> path, ReadOnlySpan<byte> target)
+        public override int SymLink(ReadOnlySpan<byte> path, ReadOnlySpan<byte> target, Guid fileGuid)
         {
             path = base.TransformPath(path);
 
@@ -421,7 +455,7 @@ namespace Linux_FuseFilesystem
 
             return res;
         }
-        public override int UpdateTimestamps(ReadOnlySpan<byte> path, ref timespec atime, ref timespec mtime, FuseFileInfoRef fiRef)
+        public override int UpdateTimestamps(ReadOnlySpan<byte> path, ref timespec atime, ref timespec mtime, FuseFileInfoRef fiRef, Guid fileGuid)
         {
             path = base.TransformPath(path);
 
@@ -429,11 +463,11 @@ namespace Linux_FuseFilesystem
 
             // LibC.utimensat()
 
-            return base.UpdateTimestamps(path, ref atime, ref mtime, fiRef);
+            return -LibC.ENOSYS;
         }
 
         // Write directory metadata
-        public override int MkDir(ReadOnlySpan<byte> path, mode_t mode)
+        public override int MkDir(ReadOnlySpan<byte> path, mode_t mode, Guid fileGuid)
         {
             path = base.TransformPath(path);
 
@@ -445,7 +479,7 @@ namespace Linux_FuseFilesystem
 
             return 0;
         }
-        public override int Rename(ReadOnlySpan<byte> path, ReadOnlySpan<byte> newPath, int flags)
+        public override int Rename(ReadOnlySpan<byte> path, ReadOnlySpan<byte> newPath, int flags, Guid fileGuid)
         {
             path = base.TransformPath(path);
             newPath = base.TransformPath(newPath);
@@ -470,7 +504,7 @@ namespace Linux_FuseFilesystem
 
             return 0;
         }
-        public override int RmDir(ReadOnlySpan<byte> path)
+        public override int RmDir(ReadOnlySpan<byte> path, Guid fileGuid)
         {
             path = base.TransformPath(path);
 
@@ -481,7 +515,7 @@ namespace Linux_FuseFilesystem
 
             return 0;
         }
-        public override int Unlink(ReadOnlySpan<byte> path)
+        public override int Unlink(ReadOnlySpan<byte> path, Guid fileGuid)
         {
             path = base.TransformPath(path);
 
@@ -494,7 +528,7 @@ namespace Linux_FuseFilesystem
         }
 
         // Filesystem level 
-        public override int StatFS(ReadOnlySpan<byte> path, ref statvfs statfs)
+        public override int StatFS(ReadOnlySpan<byte> path, ref statvfs statfs, Guid fileGuid)
         {
             path = base.TransformPath(path);
 
@@ -508,6 +542,11 @@ namespace Linux_FuseFilesystem
 
             if (res < 0) return -LibC.errno;
 
+            return 0;
+        }
+        public override int GetXAttr(ReadOnlySpan<byte> path, ReadOnlySpan<byte> name, Span<byte> data, Guid fileGuid)
+        {
+            return -LibC.ENOSYS;
             return 0;
         }
 

@@ -11,6 +11,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Text;
 using NeoCommon;
+using System.Security.Cryptography;
 
 namespace NeoBakedVolumes
 {
@@ -56,12 +57,12 @@ namespace NeoBakedVolumes
             IEnumerator<IFileInfo> IEnumerable<IFileInfo>.GetEnumerator()
             {
                 return (IEnumerator<IFileInfo>) new List<IFileInfo>();
-    }
+            }
 
             IEnumerator IEnumerable.GetEnumerator()
             {
-                return (IEnumerator<IFileInfo>)new List<IFileInfo>();
-}
+                return (IEnumerator<IFileInfo>) new List<IFileInfo>();
+            }
         }
     }
 }
@@ -103,7 +104,7 @@ namespace AssetFileSystem
             if (baRec == null) return;
 
             var vCol = bVol;
-            if (vCol==null)
+            if (vCol == null)
                 vCol = db.BakedVolumes();
 
             try
@@ -125,13 +126,13 @@ namespace AssetFileSystem
 
         public bool Exists => baRec != null;
 
-        public long Length => (long)baRec.RealLength;
+        public long Length => (long) baRec.RealLength;
 
         public string PhysicalPath => subpath;
 
         public string Name => subpath;
 
-        public DateTimeOffset LastModified => DateTimeOffset.FromUnixTimeSeconds((long)baRec.CTime);
+        public DateTimeOffset LastModified => DateTimeOffset.FromUnixTimeSeconds((long) baRec.CTime);
 
         public bool IsDirectory => false;
 
@@ -198,7 +199,7 @@ namespace AssetFileSystem
 
                 if (prevBuffer.Length < 1) // If no prevbuffer then get next
                 {
-                    val = fileCreator.unBaker.ReadNextBlock();                
+                    val = fileCreator.unBaker.ReadNextBlock();
                 }
                 else  // Else get rest of prevbuffer
                 {
@@ -206,7 +207,7 @@ namespace AssetFileSystem
                     prevBuffer = new ReadOnlyMemory<byte>();
                 }
 
-                if (val.Length<=count)
+                if (val.Length <= count)
                 {
                     Array.Copy(val.ToArray(), buffer, val.Length);
                     //buffer = val.ToArray();
@@ -266,7 +267,7 @@ namespace AssetFileSystem
                 this.db = db;
                 this.volRec = volRec;
                 this.baRec = baRec;
-  
+
                 volumelength = volRec.ArchSize / volRec.NumParts;
 
                 // Read starting settings
@@ -292,23 +293,25 @@ namespace AssetFileSystem
                 currentFileNum = -1;
                 currentPart = null;
 
+                Console.WriteLine($"Compressed={realLength} Actual={baRec.FileLength}");
+
                 //bytesRead = 0;
             }
 
-            public ReadOnlyMemory<byte> ReadNextBlock(uint size=0)
+            public ReadOnlyMemory<byte> ReadNextBlock(uint size = 0)
             {
                 // Figure out what system our primary connector is on
                 var channel = GrpcChannel.ForAddress("http://feanor:5000",
                                     new GrpcChannelOptions
                                     {
-                                        MaxReceiveMessageSize =null, // 5 MB
+                                        MaxReceiveMessageSize = null, // 5 MB
                                         MaxSendMessageSize = null // 2 MB
                                     });
                 assetClient = new BakedVolumeData.BakedVolumeDataClient(channel);
 
                 if (fileRemain < 1)
                     return new ReadOnlyMemory<byte>(); //EOF
-                
+
                 if (size < 1)
                     size = BUFFSIZE;
 
@@ -348,7 +351,7 @@ namespace AssetFileSystem
 
                 // Set variables for next time
 
-             
+
                 fileRemain -= (ulong) length;
                 offsetx += (ulong) length;
 
@@ -366,7 +369,7 @@ namespace AssetFileSystem
                     currentPartRemain = Math.Min(volumelength, realLength - fileRead);
                 }
 
-                return returnVal.Payload.Memory.Slice(0,length);
+                return returnVal.Payload.Memory.Slice(0, length);
             }
 
             internal void Release()
@@ -381,112 +384,199 @@ namespace AssetFileSystem
         /// </summary>
         public class UnbakeForFuse
         {
-        
+
 
             IMongoDatabase db;
             public IMongoCollection<BakedAssets> bakedAssets { get; set; }
 
+            private SHA1 sha1Computer;
+            private SHA1 sha1Computer2;
             private File file;
+            private ulong fileLength;
 
             public IMongoCollection<BakedVolumes> bakedVolumes { get; set; }
             public Stream assetStream { get; private set; }
             public ulong CurrentPosition { get; private set; }
 
+           
 
             BakedVolumes volRec;
             BakedAssets baRec;
+            bool atEof = false;
 
             byte[] bigBuffer = null;
-            ulong bufferOffset = 0;
-            ulong bufferBytes = 0;
-        
+            Memory<byte> bigMemory = null;
+            Memory<byte> bigRemaining = new Memory<byte>(new byte[0]);
+            //ulong bufferOffset = 0;
+            //ulong bufferBytes = 0;
 
-            public UnbakeForFuse(IMongoDatabase db,   IMongoCollection<BakedAssets> bac, IMongoCollection<BakedVolumes> bVol, string assetId)
+
+            public UnbakeForFuse(IMongoDatabase db, IMongoCollection<BakedAssets> bac, IMongoCollection<BakedVolumes> bVol, string assetId)
             {
-                this.db = db;
-                this.bakedAssets = bac;
+                try
+                {
+                    this.db = db;
+                    this.bakedAssets = bac;
 
-                Console.WriteLine($"UnbakeForFuse::Construct Asset={assetId}");
+                    sha1Computer = System.Security.Cryptography.SHA1.Create();
 
-                // We must wrap the file stream since we need the un-gzip to happen
+                    sha1Computer2 = System.Security.Cryptography.SHA1.Create();
 
-                file = new File(assetId, db, bac);
-                assetStream = file.CreateReadStream();
 
-                CurrentPosition = 0;
-                bigBuffer = null;  // Discard anything we have here
-                bufferBytes = 0;
-                bufferOffset = 0;
+                    Console.WriteLine($"UnbakeForFuse::Construct Asset={assetId}");
+
+                    // We must wrap the file stream since we need the un-gzip to happen
+
+                    file = new File(assetId, db, bac);
+
+                    fileLength = file.baRec.FileLength;
+
+                    assetStream = file.CreateReadStream();
+
+                    CurrentPosition = 0;
+                    bigBuffer = null;  // Discard anything we have here
+                    //bufferBytes = 0;
+                    //bufferOffset = 0;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"UnbakeForFuse::Construct {ex.Message} {ex.StackTrace}");
+                }
             }
 
 
             public int Read(ulong offset, Span<byte> buffer)
             {
-                Console.WriteLine($"UnbakeForFuse::Read({offset}, {buffer.Length} length)");
-
-                // Implement offset as if we are seekable
-                // Compute a forward gap and eat those bytes as we read forward
-                // If we get a negative gap, we rewind back to beginning and forward again
-
-                // We're going to read big chunks
-
-                if (bigBuffer==null)
-                    bigBuffer = new Byte[1 * 1024 * 1024];
-
-                // See if we need to rewind - we need to see how often this
-                // happens 
-                if (offset < CurrentPosition)
-                    RewindReopen();
-
-                // Bytes to skip over to accomplish offset
-                var SkipDelta = offset - CurrentPosition;
-
-                // We may have to loop indefinately to fulfill SkipDelta
-                while (true)
+                try
                 {
-                    if (bufferOffset >= bufferBytes)
-                        bufferOffset = bufferBytes = 0;
+                    if (atEof) return 0;
 
-                    if (bufferBytes < 1)  // See if we need to load the buffer - back to beginning
+                    Console.WriteLine($"UnbakeForFuse::Read(Offset={offset}, Length={buffer.Length})");
+
+                    // Implement offset as if we are seekable
+                    // Compute a forward gap and eat those bytes as we read forward
+                    // If we get a negative gap, we rewind back to beginning and forward again
+
+                    // We're going to read big chunks
+
+                    if (bigBuffer == null)
                     {
-                        // Load in some buffer if we don't already have it
-                        bufferBytes = (ulong) assetStream.Read(bigBuffer, 0, bigBuffer.Length);
-                        Console.WriteLine($"[Stream read {bufferBytes}]");
-                        bufferOffset = 0;
-                        if (bufferBytes < 1)
+                        bigBuffer = new byte[1 * 1024 * 1024];
+                        bigMemory = bigBuffer.AsMemory();   // Make Memory block so we can do slices
+                    }
+
+                    // See if we need to rewind - we need to see how often this
+                    // happens 
+                    if (offset < CurrentPosition)
+                    {
+                        Console.WriteLine($"Stream Rewind Offset={offset} Current={CurrentPosition}");
+                        RewindReopen();
+                    }
+
+                    // Bytes to skip over to accomplish offset
+                    var SkipDelta = offset - CurrentPosition;
+                    if (SkipDelta>0)    
+                        Console.WriteLine($"Need to Skip={SkipDelta} bytes");
+
+                    // We may have to loop indefinately to fulfill SkipDelta
+                    while (true)
+                    {
+                        // Either we underflow or we need to read more
+                        if (bigRemaining.Length < buffer.Length)
                         {
-                            Console.WriteLine("[EOF]");
-                            return 0;
+                            // Console.WriteLine("Load a buffer");
+                            // Load in some buffer if we don't already have it
+
+                            var readBuffer = bigMemory.Slice(bigRemaining.Length);
+                            var bufferBytes = assetStream.Read(readBuffer.Span);
+
+                            sha1Computer2.TransformBlock(readBuffer.ToArray(), 0, bufferBytes, readBuffer.ToArray(), 0);
+
+                            var newTotal = bigRemaining.Length + bufferBytes;
+                            Console.WriteLine($"[Stream read - add = {bufferBytes}, new = {newTotal}]");
+
+                            if (bufferBytes < 1)  // We hit EOF
+                            {
+                                CurrentPosition += (ulong) bigRemaining.Length;
+
+                                Console.WriteLine($"[EOF - Length={bigRemaining.Length} - File Total={CurrentPosition}]");
+                                if (CurrentPosition != fileLength)
+                                    Console.WriteLine($"Length Mismatch - read={CurrentPosition} actual={fileLength}");
+                                atEof = true;
+                                bigRemaining.Span.CopyTo(buffer);
+
+                                sha1Computer.TransformBlock(bigRemaining.ToArray(), 0, bigRemaining.Length, bigRemaining.ToArray(), 0);
+
+                                sha1Computer.TransformFinalBlock(bigRemaining.ToArray(), 0, 0);
+
+                                sha1Computer2.TransformFinalBlock(bigRemaining.ToArray(), 0, 0);
+
+                                var hashin = sha1Computer2.Hash;
+
+                                var sb = new StringBuilder();
+                                for (var i = 0; i < hashin.Length; i++)
+                                    sb.Append(hashin[i].ToString("x2"));
+
+                                Console.WriteLine($"Input Hash = {sb}");
+
+                                var hashout = sha1Computer.Hash;
+
+                                sb = new StringBuilder();
+                                for (var i = 0; i < hashout.Length; i++)
+                                    sb.Append(hashout[i].ToString("x2"));
+
+                                Console.WriteLine($"Output Hash = {sb}");
+
+                                if (hashin != hashout)
+                                    Console.WriteLine("[Hash Mismatch]");
+
+                                return bigRemaining.Length;
+                            }
+
+                            bigRemaining = new Memory<byte>(bigBuffer, 0, newTotal);
                         }
+
+                        // SkipDelta bigger than what's left -- eat it and get more
+                        if (bigRemaining.Length < (int) SkipDelta)
+                        {
+                            Console.WriteLine($"Skip Bytes in buffer");
+                            CurrentPosition += (ulong) bigRemaining.Length;  // Move high water level
+                            SkipDelta -= (ulong) bigRemaining.Length;        // We've accomplished this much of offset
+
+                            bigRemaining = new Memory<byte>(new byte[0]);  // Flush buffer
+
+                            continue;   // Back for more 
+                        }
+
+                        // Cut off SkipDelta
+                        if (SkipDelta > 0)
+                        {
+                            Console.WriteLine($"Slice off {SkipDelta} at beginning");
+                            bigRemaining = bigRemaining.Slice((int) SkipDelta);
+                            CurrentPosition += (ulong) SkipDelta;
+                        }
+
+                        // Are we equal to or bigger than the buffer
+                        var retBytes = Math.Min(bigRemaining.Length, buffer.Length);
+
+                        var copyBuf = bigRemaining.Slice(0, retBytes);
+                        bigRemaining = bigRemaining.Slice(retBytes);
+
+                        copyBuf.Span.CopyTo(buffer);
+
+                        CurrentPosition += (ulong) retBytes;
+
+                        Console.WriteLine($"[Return {retBytes} bytes - carry forward {bigRemaining.Length} - Current {CurrentPosition}");
+
+                        sha1Computer.TransformBlock(copyBuf.ToArray(), 0, copyBuf.Length, copyBuf.ToArray(), 0);
+
+                        return (int) retBytes;
                     }
-                    
-                    // What's left in buffer 
-                    var avail = bufferBytes - bufferOffset;
-
-                    // SkipDelta bigger than what's left -- eat it and get more
-                    if ((bufferBytes-bufferOffset) < SkipDelta)
-                    {
-                        CurrentPosition += avail;  // Move high water level
-                        SkipDelta -= avail;        // We've accomplished this much of offset
-                        bufferOffset += avail;     // Mark bytes as consumed
-
-                        continue;   // Back for more 
-                    }
-
-                    // Return what we can of the buffer
-                    var retBytes = Math.Min(avail, (ulong) buffer.Length);
-
-                    // Make a span of our buffer - should be cheap
-                    var oSpan = bigBuffer.AsSpan();
-
-                    // Write into the buffer - this actually wasn't that easy to figure out
-                    oSpan.Slice((int) bufferOffset, (int) (bufferOffset + retBytes)).CopyTo(buffer);
-
-                    bufferOffset += retBytes;
-                    CurrentPosition += retBytes;
-
-                    Console.WriteLine($"[Return {retBytes} bytes]");
-                    return (int) retBytes;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"UnbakeForFuse::Read {ex.Message} {ex.StackTrace}");
+                    return 0;
                 }
             }
 
@@ -496,13 +586,22 @@ namespace AssetFileSystem
             /// </summary>
             private void RewindReopen()
             {
-                assetStream.Close();
-                assetStream = file.CreateReadStream();
+                try
+                {
 
-                CurrentPosition = 0;
-                bigBuffer = null;  // Discard anything we have here
-                bufferBytes = 0;
-                bufferOffset = 0;
+                    assetStream.Close();
+                    assetStream = file.CreateReadStream();
+
+                    CurrentPosition = 0;
+                    //bigBuffer = null;  // Discard anything we have here
+                    bigRemaining = new Memory<byte>(new byte[0]);
+                    //bufferBytes = 0;
+                    //bufferOffset = 0;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"UnbakeForFuse::RewindReopen {ex.Message} {ex.StackTrace}");
+                }
             }
             public void Release()
             {

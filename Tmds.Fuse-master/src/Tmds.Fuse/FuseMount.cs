@@ -158,10 +158,14 @@ namespace Tmds.Fuse
         {
             try
             {
-                return _fileSystem.OpenDir(ToSpan(path), ref ToFileInfoRef(fi));
+                Console.WriteLine("OPENDIR TOP - Fusemount");
+                var fiF = new FuseFileInfo();
+                return _fileSystem.OpenDir(ToSpan(path), ref fiF);
+                //return _fileSystem.OpenDir(ToSpan(path), ref ToFileInfoRef(fi));
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"OPENDIR gets error: {ex.Message}");
                 return -EIO;
             }
         }
@@ -358,8 +362,9 @@ namespace Tmds.Fuse
             {
                 return _fileSystem.Create(ToSpan(path), mode, ref ToFileInfoRef(fi));
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"CREATE gets error: {ex.Message}");
                 return -EIO;
             }
         }
@@ -370,8 +375,9 @@ namespace Tmds.Fuse
             {
                 return _fileSystem.MkDir(ToSpan(path), mode);
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"MKDIR gets error: {ex.Message}");
                 return -EIO;
             }
         }
@@ -382,8 +388,9 @@ namespace Tmds.Fuse
             {
                 return _fileSystem.RmDir(ToSpan(path));
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"RMDIR gets error: {ex.Message}");
                 return -EIO;
             }
         }
@@ -394,8 +401,9 @@ namespace Tmds.Fuse
             {
                 return _fileSystem.Unlink(ToSpan(path));
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"UNLINK gets error: {ex.Message}");
                 return -EIO;
             }
         }
@@ -407,8 +415,9 @@ namespace Tmds.Fuse
                 // TODO: handle size > int.MaxValue
                 return _fileSystem.Write(ToSpan(path), off, new ReadOnlySpan<byte>(buffer, (int)size), ref ToFileInfoRef(fi));
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"WRITE gets error: {ex.Message}");
                 return -EIO;
             }
         }
@@ -421,8 +430,9 @@ namespace Tmds.Fuse
                 span.Clear();
                 return _fileSystem.GetAttr(ToSpan(path), ref MemoryMarshal.GetReference(span), ToFileInfo(fi));
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"GETATTR gets error: {ex.Message}");
                 return -EIO;
             }
         }
@@ -443,10 +453,12 @@ namespace Tmds.Fuse
                     _previousFiller = new ManagedFiller(filler, fillDelegate);
                 }
 
-                return _fileSystem.ReadDir(ToSpan(path), offset, (ReadDirFlags)flags, ToDirectoryContent(buf, fillDelegate), ref ToFileInfoRef(fi));
+                var fiF = new FuseFileInfo();
+                return _fileSystem.ReadDir(ToSpan(path), offset, (ReadDirFlags) flags, ToDirectoryContent(buf, fillDelegate), ref fiF);
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"READDIR gets error: {ex.Message}");
                 return -EIO;
             }
         }
@@ -457,8 +469,9 @@ namespace Tmds.Fuse
             {
                 return _fileSystem.Open(ToSpan(path), ref ToFileInfoRef(fi));
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"OPEN gets error: {ex.Message}");
                 return -EIO;
             }
         }
@@ -470,8 +483,9 @@ namespace Tmds.Fuse
                 // TODO: handle size > int.MaxValue
                 return _fileSystem.Read(ToSpan(path), off, new Span<byte>(buffer, (int)size), ref ToFileInfoRef(fi));
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"READ gets error: {ex.Message} {ex.StackTrace}");
                 return -EIO;
             }
         }
@@ -483,8 +497,9 @@ namespace Tmds.Fuse
                 _fileSystem.Release(ToSpan(path), ref ToFileInfoRef(fi));
                 return 0;
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"RELEASE gets error: {ex.Message} {ex.StackTrace}");
                 return -EIO;
             }
         }
@@ -509,7 +524,8 @@ namespace Tmds.Fuse
             }
             else
             {
-                return ref MemoryMarshal.GetReference<FuseFileInfo>(new Span<FuseFileInfo>(fi, 1));
+                return ref System.Runtime.CompilerServices.Unsafe.AsRef<FuseFileInfo>(fi);
+               // return ref MemoryMarshal.GetReference<FuseFileInfo>(new Span<FuseFileInfo>(fi, 1));
             }
         }
 
@@ -521,7 +537,7 @@ namespace Tmds.Fuse
 
         private unsafe DirectoryContent ToDirectoryContent(void* buffer, fuse_fill_dir_Delegate fillDelegate) => new DirectoryContent(buffer, fillDelegate);
 
-        public unsafe void Mount()
+        public unsafe void Mount(string[] argList=null)
         {
             lock (_gate)
             {
@@ -538,8 +554,11 @@ namespace Tmds.Fuse
                         fuse* fuse = null;
                         try
                         {
-                            LibFuse.fuse_opt_add_arg(&args, "");
-
+                            LibFuse.fuse_opt_add_arg(&args, "");  // argv[0]
+                            if (argList != null)
+                                foreach (var v in argList)
+                                    LibFuse.fuse_opt_add_arg(&args, v);
+                                                                                                           
                             fuse_operations ops;
                             ops.getattr = Marshal.GetFunctionPointerForDelegate(_getattr);
                             ops.readdir = Marshal.GetFunctionPointerForDelegate(_readdir);
