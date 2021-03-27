@@ -8,6 +8,7 @@
   <ItemGroup>
     <PackageReference Include="Grpc.AspNetCore" Version="2.36.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="5.0.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -19,6 +20,18 @@
 
   <ItemGroup>
     <Folder Include="Protos\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Scripts\bakedfileservice.service">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Scripts\bakedfileservice.sh">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Scripts\install.sh">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

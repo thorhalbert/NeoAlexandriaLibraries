@@ -263,7 +263,8 @@ namespace Linux_FuseFilesystem
                     var lc = LibC.lstat(toBp(path), st);
                     if (lc < 0)
                     {
-                        Console.WriteLine($"Stat error: {lc} errno={LibC.errno}");
+                        // Windows file explorer hits lot of files that don't exist
+                        //Console.WriteLine($"Stat error: {lc} errno={LibC.errno} path={RawDirs.HR(path)}");
                         return -LibC.errno;
                     }
                 }

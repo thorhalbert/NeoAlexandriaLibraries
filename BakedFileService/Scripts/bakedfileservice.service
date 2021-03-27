@@ -1,0 +1,13 @@
+[Unit]
+Description=NeoAlexandria Baked File Service
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/dotnet /usr/local/lib/T/BakedFileService/BakedFileService.dll
+WorkingDirectory=/usr/local/lib/T/BakedFileService
+User=neo
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
