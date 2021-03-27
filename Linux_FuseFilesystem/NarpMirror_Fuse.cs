@@ -151,7 +151,7 @@ namespace Linux_FuseFilesystem
                         ExtAssetSha1 = extAssetSha1,
                         ExtFileHandle = null,
                     });
-                    Console.WriteLine($"Create Context (sha1) ID={fi.fh}");
+                    //Console.WriteLine($"Create Context (sha1) ID={fi.fh}");
                 }
                 else
                     Console.WriteLine($"Error Opening /dev/null?  Error={LibC.errno}");
@@ -172,7 +172,7 @@ namespace Linux_FuseFilesystem
                     ExtAssetSha1 = null,
                     ExtFileHandle = null,
                 });
-                Console.WriteLine($"Create Context (null) ID={fi.fh}");
+                //Console.WriteLine($"Create Context (null) ID={fi.fh}");
 
                 return 0;
             }

@@ -158,7 +158,7 @@ namespace Tmds.Fuse
         {
             try
             {
-                Console.WriteLine("OPENDIR TOP - Fusemount");
+                //Console.WriteLine("OPENDIR TOP - Fusemount");
                 var fiF = new FuseFileInfo();
                 return _fileSystem.OpenDir(ToSpan(path), ref fiF);
                 //return _fileSystem.OpenDir(ToSpan(path), ref ToFileInfoRef(fi));

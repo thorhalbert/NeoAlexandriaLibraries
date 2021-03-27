@@ -28,7 +28,7 @@ namespace NeoFS
 
             // Test to see if we can new a FuseFileInfo
 
-            var fi = new FuseFileInfo();
+          
 
             var provisioner = new ProvisionFilesystem();
 
@@ -39,7 +39,7 @@ namespace NeoFS
             var fileSystem =  provisioner.CreateFs(NeoDb, narps);
             //var fileSystem = new Mounter.MemoryFileSystem(); 
 
-            string mountPoint = $"/tmp/NeoFS";
+            string mountPoint = $"/NARPV";
             System.Console.WriteLine($"Mounting filesystem at {mountPoint}");
 
             Fuse.LazyUnmount(mountPoint);
@@ -55,7 +55,7 @@ namespace NeoFS
                 };
 
                 // Debug = "-d"
-                using (var mount = Fuse.Mount(mountPoint, fileSystem, mo, Arguments : new string[] {"-d", "-o", "allow_other" }))
+                using (var mount = Fuse.Mount(mountPoint, fileSystem, mo, Arguments : new string[] {"-o", "allow_other" }))
                 {
                     await mount.WaitForUnmountAsync();
                 }

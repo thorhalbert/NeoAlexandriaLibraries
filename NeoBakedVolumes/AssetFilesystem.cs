@@ -293,7 +293,7 @@ namespace AssetFileSystem
                 currentFileNum = -1;
                 currentPart = null;
 
-                Console.WriteLine($"Compressed={realLength} Actual={baRec.FileLength}");
+                //Console.WriteLine($"Compressed={realLength} Actual={baRec.FileLength}");
 
                 //bytesRead = 0;
             }
@@ -342,7 +342,7 @@ namespace AssetFileSystem
                 //var dump = Utils.HexDump(returnVal.Payload.ToByteArray());
                 //Console.WriteLine(dump);
 
-                Console.WriteLine($"Read: Part {currentFileNum}, Length {length} Read {fileRead} Remain {currentPartRemain} ");
+                //Console.WriteLine($"Read: Part {currentFileNum}, Length {length} Read {fileRead} Remain {currentPartRemain} ");
 
                 //using(var f = new BinaryWriter(System.IO.File.OpenWrite("test.gz")))
                 //{
@@ -362,7 +362,7 @@ namespace AssetFileSystem
                 {
                     FileNum++;
 
-                    Console.WriteLine($"[Proceed to next file {FileNum}]");
+                   // Console.WriteLine($"[Proceed to next file {FileNum}]");
 
                     offsetx = 0;   // Start at beginning of next file
 
@@ -385,13 +385,14 @@ namespace AssetFileSystem
         public class UnbakeForFuse
         {
 
+            public bool Debug { get; set; } = false;
 
             IMongoDatabase db;
             public IMongoCollection<BakedAssets> bakedAssets { get; set; }
 
             private string assetId;
-            private SHA1 sha1Computer;
-            private SHA1 sha1Computer2;
+            //private SHA1 sha1Computer;
+            //private SHA1 sha1Computer2;
             private File file;
             private ulong fileLength;
 
@@ -420,12 +421,12 @@ namespace AssetFileSystem
                     this.bakedAssets = bac;
                     this.assetId = assetId;
 
-                    sha1Computer = System.Security.Cryptography.SHA1.Create();
+                    //sha1Computer = System.Security.Cryptography.SHA1.Create();
 
-                    sha1Computer2 = System.Security.Cryptography.SHA1.Create();
+                    //sha1Computer2 = System.Security.Cryptography.SHA1.Create();
 
 
-                    Console.WriteLine($"UnbakeForFuse::Construct Asset={assetId}");
+                    if (Debug) Console.WriteLine($"UnbakeForFuse::Construct Asset={assetId}");
 
                     // We must wrap the file stream since we need the un-gzip to happen
 
@@ -453,7 +454,7 @@ namespace AssetFileSystem
                 {
                     if (atEof) return 0;
 
-                    Console.WriteLine($"UnbakeForFuse::Read(Offset={offset}, Length={buffer.Length})");
+                    if (Debug) Console.WriteLine($"UnbakeForFuse::Read(Offset={offset}, Length={buffer.Length})");
 
                     // Implement offset as if we are seekable
                     // Compute a forward gap and eat those bytes as we read forward
@@ -471,14 +472,14 @@ namespace AssetFileSystem
                     // happens 
                     if (offset < CurrentPosition)
                     {
-                        Console.WriteLine($"Stream Rewind Offset={offset} Current={CurrentPosition}");
+                        if (Debug) Console.WriteLine($"Stream Rewind Offset={offset} Current={CurrentPosition}");
                         RewindReopen();
                     }
 
                     // Bytes to skip over to accomplish offset
                     var SkipDelta = offset - CurrentPosition;
-                    if (SkipDelta>0)    
-                        Console.WriteLine($"Need to Skip={SkipDelta} bytes");
+                    if (SkipDelta>0)
+                        if (Debug) Console.WriteLine($"Need to Skip={SkipDelta} bytes");
 
                     // We may have to loop indefinately to fulfill SkipDelta
                     while (true)
@@ -493,47 +494,48 @@ namespace AssetFileSystem
                             bigRemaining.CopyTo(bigMemory);
                             var bufferBytes = assetStream.Read(readBuffer.Span);
 
-                            sha1Computer2.TransformBlock(readBuffer.ToArray(), 0, bufferBytes, readBuffer.ToArray(), 0);
+                            //sha1Computer2.TransformBlock(readBuffer.ToArray(), 0, bufferBytes, readBuffer.ToArray(), 0);
 
                             var newTotal = bigRemaining.Length + bufferBytes;
-                            Console.WriteLine($"[Stream read - add = {bufferBytes}, new = {newTotal}]");
+                            if (Debug)
+                                Console.WriteLine($"[Stream read - add = {bufferBytes}, new = {newTotal}]");
 
                             if (bufferBytes < 1)  // We hit EOF
                             {
                                 CurrentPosition += (ulong) bigRemaining.Length;
 
-                                Console.WriteLine($"[EOF - Length={bigRemaining.Length} - File Total={CurrentPosition}]");
+                                if (Debug) Console.WriteLine($"[EOF - Length={bigRemaining.Length} - File Total={CurrentPosition}]");
                                 if (CurrentPosition != fileLength)
-                                    Console.WriteLine($"Length Mismatch - read={CurrentPosition} actual={fileLength}");
+                                    if (Debug) Console.WriteLine($"Length Mismatch - read={CurrentPosition} actual={fileLength}");
                                 atEof = true;
                                 bigRemaining.Span.CopyTo(buffer);
 
-                                sha1Computer.TransformBlock(bigRemaining.ToArray(), 0, bigRemaining.Length, bigRemaining.ToArray(), 0);
+                                //sha1Computer.TransformBlock(bigRemaining.ToArray(), 0, bigRemaining.Length, bigRemaining.ToArray(), 0);
 
-                                sha1Computer.TransformFinalBlock(bigRemaining.ToArray(), 0, 0);
+                                //sha1Computer.TransformFinalBlock(bigRemaining.ToArray(), 0, 0);
 
-                                sha1Computer2.TransformFinalBlock(bigRemaining.ToArray(), 0, 0);
+                                //sha1Computer2.TransformFinalBlock(bigRemaining.ToArray(), 0, 0);
 
-                                var hashin = sha1Computer2.Hash;
+                                //var hashin = sha1Computer2.Hash;
 
                                 // The hashes aren't that interesting if system is skipping about
 
-                                var sb = new StringBuilder();
-                                for (var i = 0; i < hashin.Length; i++)
-                                    sb.Append(hashin[i].ToString("x2"));
+                                //var sb = new StringBuilder();
+                                //for (var i = 0; i < hashin.Length; i++)
+                                //    sb.Append(hashin[i].ToString("x2"));
 
-                                Console.WriteLine($"Input Hash = {sb}");
+                                //Console.WriteLine($"Input Hash = {sb}");
 
-                                var hashout = sha1Computer.Hash;
+                                //var hashout = sha1Computer.Hash;
 
-                                sb = new StringBuilder();
-                                for (var i = 0; i < hashout.Length; i++)
-                                    sb.Append(hashout[i].ToString("x2"));
+                                //sb = new StringBuilder();
+                                //for (var i = 0; i < hashout.Length; i++)
+                                //    sb.Append(hashout[i].ToString("x2"));
 
-                                Console.WriteLine($"Output Hash = {sb}");
+                                //Console.WriteLine($"Output Hash = {sb}");
 
-                                if (hashin != hashout)
-                                    Console.WriteLine("[Hash Mismatch]");
+                                //if (hashin != hashout)
+                                //    Console.WriteLine("[Hash Mismatch]");
 
                                 return bigRemaining.Length;
                             }
@@ -544,7 +546,7 @@ namespace AssetFileSystem
                         // SkipDelta bigger than what's left -- eat it and get more
                         if (bigRemaining.Length < (int) SkipDelta)
                         {
-                            Console.WriteLine($"Skip All Bytes in buffer remain={bigRemaining.Length} < skip={SkipDelta}");
+                            if (Debug) Console.WriteLine($"Skip All Bytes in buffer remain={bigRemaining.Length} < skip={SkipDelta}");
                             CurrentPosition += (ulong) bigRemaining.Length;  // Move high water level
                             SkipDelta -= (ulong) bigRemaining.Length;        // We've accomplished this much of offset
 
@@ -556,7 +558,7 @@ namespace AssetFileSystem
                         // Cut off SkipDelta
                         if (SkipDelta > 0)
                         {
-                            Console.WriteLine($"Slice off {SkipDelta} at beginning");
+                            if (Debug) Console.WriteLine($"Slice off {SkipDelta} at beginning");
                             bigRemaining = bigRemaining.Slice((int) SkipDelta);
                             CurrentPosition += (ulong) SkipDelta;
                         }
@@ -571,9 +573,9 @@ namespace AssetFileSystem
 
                         CurrentPosition += (ulong) retBytes;
 
-                        Console.WriteLine($"[Return {retBytes} bytes - carry forward {bigRemaining.Length} - Current {CurrentPosition}");
+                        if (Debug) Console.WriteLine($"[Return {retBytes} bytes - carry forward {bigRemaining.Length} - Current {CurrentPosition}");
 
-                        sha1Computer.TransformBlock(copyBuf.ToArray(), 0, copyBuf.Length, copyBuf.ToArray(), 0);
+                        //sha1Computer.TransformBlock(copyBuf.ToArray(), 0, copyBuf.Length, copyBuf.ToArray(), 0);
 
                         return (int) retBytes;
                     }
@@ -593,11 +595,9 @@ namespace AssetFileSystem
             {
                 try
                 {
-                    Console.WriteLine("[Reopen stream]");
+                    if (Debug) Console.WriteLine("[Reopen stream]");
                     assetStream.Close();
-                    //assetStream = file.CreateReadStream();
-
-                    //bufferOffset = 0;
+         
 
                     file = new File(assetId, db, bakedAssets);
 
@@ -606,9 +606,9 @@ namespace AssetFileSystem
                     assetStream = file.CreateReadStream();
 
                     CurrentPosition = 0;
-                    //bigBuffer = null;  // Discard anything we have here
+                   
                     bigRemaining = new Memory<byte>(new byte[0]);
-                    //bufferBytes = 0;
+                  
                 }
                 catch (Exception ex)
                 {
