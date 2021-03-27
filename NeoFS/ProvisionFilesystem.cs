@@ -59,6 +59,8 @@ namespace NeoFS
         //    yield break;
         //}
 
+      
+
         public IEnumerable<KeyValuePair<byte[], byte[]>> GetNarps(IMongoCollection<NARPs> narps)
         {
             var theFilter = Builders<NARPs>.Filter.Empty;
@@ -98,6 +100,9 @@ namespace NeoFS
 
             // Load the mountpoints
             rootSystem.Mountpoints = topLayer.MapSys;
+
+          
+
 
             return topLayer;
         }

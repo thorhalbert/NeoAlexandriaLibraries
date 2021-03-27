@@ -55,7 +55,7 @@ namespace NeoFS
                 };
 
                 // Debug = "-d"
-                using (var mount = Fuse.Mount(mountPoint, fileSystem, mo, Arguments : new string[] { }))
+                using (var mount = Fuse.Mount(mountPoint, fileSystem, mo, Arguments : new string[] {"-d", "-o", "allow_other" }))
                 {
                     await mount.WaitForUnmountAsync();
                 }

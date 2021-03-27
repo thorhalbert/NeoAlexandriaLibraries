@@ -389,6 +389,7 @@ namespace AssetFileSystem
             IMongoDatabase db;
             public IMongoCollection<BakedAssets> bakedAssets { get; set; }
 
+            private string assetId;
             private SHA1 sha1Computer;
             private SHA1 sha1Computer2;
             private File file;
@@ -417,6 +418,7 @@ namespace AssetFileSystem
                 {
                     this.db = db;
                     this.bakedAssets = bac;
+                    this.assetId = assetId;
 
                     sha1Computer = System.Security.Cryptography.SHA1.Create();
 
@@ -514,6 +516,8 @@ namespace AssetFileSystem
 
                                 var hashin = sha1Computer2.Hash;
 
+                                // The hashes aren't that interesting if system is skipping about
+
                                 var sb = new StringBuilder();
                                 for (var i = 0; i < hashin.Length; i++)
                                     sb.Append(hashin[i].ToString("x2"));
@@ -540,7 +544,7 @@ namespace AssetFileSystem
                         // SkipDelta bigger than what's left -- eat it and get more
                         if (bigRemaining.Length < (int) SkipDelta)
                         {
-                            Console.WriteLine($"Skip Bytes in buffer");
+                            Console.WriteLine($"Skip All Bytes in buffer remain={bigRemaining.Length} < skip={SkipDelta}");
                             CurrentPosition += (ulong) bigRemaining.Length;  // Move high water level
                             SkipDelta -= (ulong) bigRemaining.Length;        // We've accomplished this much of offset
 
@@ -589,15 +593,22 @@ namespace AssetFileSystem
             {
                 try
                 {
-
+                    Console.WriteLine("[Reopen stream]");
                     assetStream.Close();
+                    //assetStream = file.CreateReadStream();
+
+                    //bufferOffset = 0;
+
+                    file = new File(assetId, db, bakedAssets);
+
+                    fileLength = file.baRec.FileLength;
+
                     assetStream = file.CreateReadStream();
 
                     CurrentPosition = 0;
                     //bigBuffer = null;  // Discard anything we have here
                     bigRemaining = new Memory<byte>(new byte[0]);
                     //bufferBytes = 0;
-                    //bufferOffset = 0;
                 }
                 catch (Exception ex)
                 {

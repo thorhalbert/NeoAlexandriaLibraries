@@ -61,6 +61,8 @@ namespace Linux_FuseFilesystem
 
         Dictionary<ulong, FileContext> FileContexts = new Dictionary<ulong, FileContext>();
 
+        public override bool SupportsMultiThreading => true;  // Let's see if this is true
+
         public NarpMirror_MountDispatch(FuseMountableBase defLayer)
         {
             defaultLayer = defLayer;
