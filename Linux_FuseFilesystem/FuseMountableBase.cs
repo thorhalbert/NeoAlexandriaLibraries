@@ -115,23 +115,27 @@ namespace Linux_FuseFilesystem
                 stat.st_uid = 10010; // aRec.Stat.uid;
                 stat.st_gid = 10010; // aRec.Stat.gid;
 
-                stat.st_size = aRec.Stat.size;
+                if (aRec.Stat != null)
+                {
+                    stat.st_size = aRec.Stat.size;
 
-                stat.st_ctim = new timespec
-                {
-                    tv_sec = aRec.Stat.ctime,
-                    tv_nsec = 0
-                };
-                stat.st_mtim = new timespec
-                {
-                    tv_sec = aRec.Stat.mtime,
-                    tv_nsec = 0
-                };
-                stat.st_atim = new timespec
-                {
-                    tv_sec = aRec.Stat.atime,
-                    tv_nsec = 0
-                };
+                    stat.st_ctim = new timespec
+                    {
+                        tv_sec = aRec.Stat.ctime,
+                        tv_nsec = 0
+                    };
+                    stat.st_mtim = new timespec
+                    {
+                        tv_sec = aRec.Stat.mtime,
+                        tv_nsec = 0
+                    };
+                    stat.st_atim = new timespec
+                    {
+                        tv_sec = aRec.Stat.atime,
+                        tv_nsec = 0
+                    };
+                }else
+                    Console.WriteLine($"No internal Stat: {RawDirs.HR(path)}={RawDirs.HR(link)}");
 
                 if (debug) Console.WriteLine($"Stat Asset Dump: size={stat.st_size}, mode={stat.st_mode}, mtim={stat.st_mtim}");
                 if (debug) Console.WriteLine($"Return stat for: {fileuuid.ToString().ToLower()}");
@@ -153,6 +157,7 @@ namespace Linux_FuseFilesystem
                 if (bakedVolumes == null)
                     bakedVolumes = NeoMongo.NeoDb.BakedVolumes();
 
+                //Console.WriteLine($"AssetOpen({RawDirs.HR(path)})");
                 // "Open" the file -- mostly just setup
                 var assetLink = new AssetFileSystem.File.UnbakeForFuse(NeoMongo.NeoDb, bakedAssets, bakedVolumes, context.ExtAssetSha1);
                 context.AssetLink = assetLink;  // Save in file context -- mostly needed by read
@@ -181,6 +186,7 @@ namespace Linux_FuseFilesystem
             {
                 if (context.AssetLink!=null)
                 {
+                    //Console.WriteLine($"AssetRelease({RawDirs.HR(path)})");
                     var assetLink = context.AssetLink;
                     assetLink.Release();   // Internally clear buffers and such
                 }

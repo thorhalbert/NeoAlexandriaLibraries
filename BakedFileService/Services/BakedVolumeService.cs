@@ -92,7 +92,7 @@ namespace BakedFileService
             retRec.Length = count;  // Not sure what's efficient here - nice if we didn't have to copy
             retRec.Payload = ByteString.CopyFrom(buffer, 0, count);
 
-            Console.WriteLine($"[Read {count} bytes @{request.Offset} offset (actual={didSeek}, newpos={cache.VolumeStream.Position})");
+            Console.WriteLine($"[Read: {request.BakedVolume}/{request.Part} Count={count} Offset={request.Offset} (actual={didSeek}, newpos={cache.VolumeStream.Position})");
 
             return retRec;
         }

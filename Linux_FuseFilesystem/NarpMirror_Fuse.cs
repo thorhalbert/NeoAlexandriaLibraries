@@ -214,7 +214,8 @@ namespace Linux_FuseFilesystem
         {
             path = base.TransformPath(path);
 
-            if (debug) Console.WriteLine($"NeoFS::Release()");
+            if (debug) 
+                Console.WriteLine($"NeoFS::Release({RawDirs.HR(path)})");
 
             if (FileContexts.TryGetValue(fi.fh, out var context))
             {
@@ -241,8 +242,8 @@ namespace Linux_FuseFilesystem
         {
             path = base.TransformPath(path);
 
-            //if (debug)
-            Console.WriteLine($"NeoFS::Access({RawDirs.HR(path)},{mode}");
+            if (debug)
+              Console.WriteLine($"NeoFS::Access({RawDirs.HR(path)},{mode}");
 
             var res = LibC.access(toBp(path), (int) mode);
             if (res < 0)
@@ -301,7 +302,7 @@ namespace Linux_FuseFilesystem
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"GetAttr error: {ex.Message}");
+                Console.WriteLine($"GetAttr error: {ex.Message} {ex.StackTrace}");
                 return -LibC.ENOENT;
             }
         }
@@ -337,6 +338,12 @@ namespace Linux_FuseFilesystem
 
             fi.fh = (ulong) res;
 
+            // Make these settable (these actually come in on the Init method, which TDMS isn't handling yet)
+            var uid = (uid_t) 10010;
+            var gid = (gid_t) 10010;
+
+            res = LibC.chown(toBp(path), uid, gid);
+            
             return 0;
         }
         public override int Write(ReadOnlySpan<byte> path, ulong off, ReadOnlySpan<byte> buffer, ref FuseFileInfo fi, Guid fileGuid)
@@ -462,9 +469,20 @@ namespace Linux_FuseFilesystem
 
             if (debug) Console.WriteLine($"NeoFS::UpdateTimestamps()");
 
-            // LibC.utimensat()
+            timespec[] timeList = new timespec[2];
+            timeList[0].tv_sec = atime.tv_sec;
+            timeList[0].tv_nsec = atime.tv_nsec;
+            timeList[1].tv_sec = mtime.tv_sec;
+            timeList[1].tv_nsec = mtime.tv_nsec;
 
-            return -LibC.ENOSYS;
+            fixed (timespec* timeA = &timeList[0])
+            { 
+                var res = LibC.utimensat(0, toBp(path), timeA, 0);
+                if (res < 0)
+                    return -LibC.errno;
+            }
+
+            return 0;
         }
 
         // Write directory metadata
@@ -485,7 +503,8 @@ namespace Linux_FuseFilesystem
             path = base.TransformPath(path);
             newPath = base.TransformPath(newPath);
 
-            if (debug) Console.WriteLine($"NeoFS::Rename()");
+           // if (debug) 
+                Console.WriteLine($"NeoFS::Rename({RawDirs.HR(path)}, {RawDirs.HR(newPath)})");
 
             // Without rename call this is actually a bit involved
 

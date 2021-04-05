@@ -3,7 +3,8 @@ Description=NeoAlexandria Baked File Service
 
 [Service]
 Type=notify
-ExecStart=/usr/bin/dotnet /usr/local/lib/T/BakedFileService/BakedFileService.dll
+
+ExecStart=/usr/local/bin/BakedFileService
 WorkingDirectory=/usr/local/lib/T/BakedFileService
 User=neo
 Restart=always

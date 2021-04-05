@@ -61,7 +61,7 @@ namespace Linux_FuseFilesystem
 
         Dictionary<ulong, FileContext> FileContexts = new Dictionary<ulong, FileContext>();
 
-        public override bool SupportsMultiThreading => true;  // Let's see if this is true
+        public override bool SupportsMultiThreading => false;  // Let's see if this is true
 
         public NarpMirror_MountDispatch(FuseMountableBase defLayer)
         {
@@ -433,12 +433,20 @@ namespace Linux_FuseFilesystem
         }
         public override int Rename(ReadOnlySpan<byte> path, ReadOnlySpan<byte> newPath, int flags)
         {
-            if (debug) Console.WriteLine($"Mount::Rename()");
+            //if (debug)
+                Console.WriteLine($"Mount::Rename({RawDirs.HR(path)},{RawDirs.HR(newPath)})");
 
             FuseFileInfo fi = new FuseFileInfo();
             var usePath = DispatchOn(path, out var fs,ref fi, out var fileGuid);
             if (usePath.Length < 1) return -LibC.ENOENT;
-            return fs.Rename(usePath, newPath, flags, fileGuid);
+            var toPath = DispatchOn(newPath, out var fs2, ref fi, out var fileGuid2);
+            if (usePath.Length < 1) return -LibC.ENOENT;
+
+            // this should fail if these are in different structures
+            if (fs != fs2)
+                return -LibC.ENOENT;
+
+            return fs.Rename(usePath, toPath, flags, fileGuid);
         }
         public override int RmDir(ReadOnlySpan<byte> path)
         {
