@@ -658,7 +658,7 @@ namespace AssetFileSystem
                         if (bigRemaining.Length < buffer.Length)
                         {
                             // Console.WriteLine("Load a buffer");
-                            // Load in some buffer if we don't already have it
+                            // Load in some buffer if we don't already have it - copy what's left of bigremaining to bigMemory and add to end
 
                             var readBuffer = bigMemory.Slice(bigRemaining.Length);
                             bigRemaining.CopyTo(bigMemory);
@@ -710,6 +710,7 @@ namespace AssetFileSystem
                                 return bigRemaining.Length;
                             }
 
+                            // Restate bigRemaining from the main buffer with new total
                             bigRemaining = new Memory<byte>(bigBuffer, 0, newTotal);
                         }
 
@@ -795,8 +796,10 @@ namespace AssetFileSystem
                 // Clear/Destroy any buffers we have outstanding
 
                 bigBuffer = null;
-                assetStream.Close();
-                file.Release();
+                if (assetStream!=null)   
+                    assetStream.Close();
+                if (file!=null)
+                    file.Release();
                 file = null;
             }
         }

@@ -18,7 +18,7 @@ namespace NeoBakedVolumes.Mongo
     public class BakedAssets
     {
         public string _id { get; set; }
-        [BsonRequired] public bool? Annealed { get; set; }  // 400000/400000
+        [BsonIgnoreIfNull] public bool? Annealed { get; set; }  // 400000/400000
         [BsonRequired] public UInt32 Block { get; set; }   // 400000/400000
         [BsonRequired] public string Comp { get; set; } // 400000/400000
         [BsonRequired] public UInt64 FileLength { get; set; }  // 400000/400000

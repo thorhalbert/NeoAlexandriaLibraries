@@ -134,8 +134,17 @@ namespace Linux_FuseFilesystem
                         tv_sec = aRec.Stat.atime,
                         tv_nsec = 0
                     };
-                }else
+                }
+                else
+                {
+                    // Just turn the link into our stat, we'll just keep the dates and make it into a file
+                    stat.st_nlink = 1;
+                    stat.st_mode = LibC.S_IFREG | (mode_t) 0b100_100_100;   // 444 protection for now
+                    stat.st_uid = 10010; // aRec.Stat.uid;
+                    stat.st_gid = 10010; // aRec.Stat.gid;
+
                     Console.WriteLine($"No internal Stat: {RawDirs.HR(path)}={RawDirs.HR(link)}");
+                }
 
                 if (debug) Console.WriteLine($"Stat Asset Dump: size={stat.st_size}, mode={stat.st_mode}, mtim={stat.st_mtim}");
                 if (debug) Console.WriteLine($"Return stat for: {fileuuid.ToString().ToLower()}");
