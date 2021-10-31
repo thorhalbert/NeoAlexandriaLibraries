@@ -75,7 +75,7 @@ namespace NeoCommon
         }
 
         // Find end of zero term string and return it as a byte[] with \0 stripped
-        public static byte[] ZeroTermString(byte[] inbuf, bool RemoveNull=true)
+        public static byte[] ZeroTermString(this byte[] inbuf, bool RemoveNull=true)
         {
             int rem = 1;
             if (!RemoveNull) rem = 0;
@@ -94,7 +94,7 @@ namespace NeoCommon
         }
 
         // Almost same as above but return byte[] from IntPtr string
-        public static unsafe byte[] StringPtrToBytes(IntPtr p)
+        public static unsafe byte[] StringPtrToBytes(this IntPtr p)
         {
             if (p == IntPtr.Zero)
                 return null;
@@ -106,7 +106,7 @@ namespace NeoCommon
 
             return ret;
         }
-        public static unsafe IntPtr ToNullTerm(byte[] path)
+        public static unsafe IntPtr ToNullTerm(this byte[] path)
         {
             var l = path.Length;
             var newP = new byte[l + 1];
@@ -118,7 +118,7 @@ namespace NeoCommon
                 return new IntPtr(p);
         }
 
-        public static unsafe byte* ToBytePtr(byte[] path)
+        public static unsafe byte* ToBytePtr(this byte[] path)
         {
             var l = path.Length;
             var newP = new byte[l + 1];
@@ -130,7 +130,7 @@ namespace NeoCommon
                 return p;
         }
 
-        public static string HR(ReadOnlySpan<byte> path)
+        public static string HR(this ReadOnlySpan<byte> path)
         {
             return Encoding.UTF8.GetString(path.ToArray());
         }

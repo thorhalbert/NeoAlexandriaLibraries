@@ -583,7 +583,7 @@ namespace Linux_FuseFilesystem
                 return p;
         }
 
-        public unsafe byte* toBp(ReadOnlySpan<byte> path)
+        public unsafe byte* toBp( ReadOnlySpan<byte> path)
         {
             return RawDirs.ToBytePtr(path.ToArray());
         }

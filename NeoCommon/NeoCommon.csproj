@@ -13,13 +13,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Confluent.Kafka" Version="1.6.3" />
-    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="5.0.0" />
-    <PackageReference Include="mongocsharpdriver" Version="2.12.1" />
-    <PackageReference Include="MongoDB.Bson" Version="2.12.1" />
-    <PackageReference Include="MongoDB.Driver" Version="2.12.1" />
-    <PackageReference Include="MongoDB.Driver.Core" Version="2.12.1" />
-    <PackageReference Include="Mono.Posix.NETStandard" Version="1.0.0" />
+    <PackageReference Include="Confluent.Kafka" Version="1.8.1" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="6.0.0-rc.1.21451.13" />
+    <PackageReference Include="mongocsharpdriver" Version="2.13.2" />
+    <PackageReference Include="MongoDB.Bson" Version="2.13.2" />
+    <PackageReference Include="MongoDB.Driver" Version="2.13.2" />
+    <PackageReference Include="MongoDB.Driver.Core" Version="2.13.2" />
+    <PackageReference Include="Mono.Posix.NETStandard" Version="5.20.1-preview" />
     <PackageReference Include="Tmds.LibC" Version="0.5.0" />
   </ItemGroup>
 
