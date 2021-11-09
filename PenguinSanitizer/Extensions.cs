@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Tmds.Linux;
 
 namespace PenguinSanitizer
 {
@@ -67,6 +68,17 @@ namespace PenguinSanitizer
 
             }
             return new byte[0];
+        }
+
+        public static DateTimeOffset ToDTO(this timespec spec)
+        {
+            var s = spec.tv_sec;
+            var n = spec.tv_nsec;
+
+            var dto = DateTimeOffset.FromUnixTimeSeconds(s);
+            dto.AddMilliseconds(n / 1000.0);
+
+            return dto;
         }
 
         // Almost same as above but return byte[] from IntPtr string

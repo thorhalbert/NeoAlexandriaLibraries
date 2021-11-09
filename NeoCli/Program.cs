@@ -4,6 +4,7 @@ using NeoScry;
 using PenguinSanitizer;
 using System.Reflection;
 using System.Text;
+using System.Management.Automation;
 
 namespace NeoCli
 {
