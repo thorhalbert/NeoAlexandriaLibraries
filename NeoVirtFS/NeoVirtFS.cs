@@ -1,4 +1,6 @@
-﻿using System;
+﻿using MongoDB.Driver;
+using NeoAssets.Mongo;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,8 +12,10 @@ namespace NeoVirtFS
 {
     public class NeoVirtFS : FuseFileSystemBase
     {
-        public NeoVirtFS()
+        IMongoCollection<NeoAssets.Mongo.NeoVirtFS> NeoVirtFSCol = null;
+        public NeoVirtFS(IMongoDatabase db)
         {
+            NeoVirtFSCol = db.NeoVirtFS();
 
         }
         public override int Access(ReadOnlySpan<byte> path, mode_t mode)

@@ -11,9 +11,25 @@ namespace NeoAssets.Mongo
 {
     public static class NeoVirtFS_exts
     {
+        private static bool _NeoVirtFSSet = false;
         public static IMongoCollection<NeoVirtFS> NeoVirtFS(this IMongoDatabase db)
         {
-            return db.GetCollection<NeoVirtFS>("NeoVirtFS");
+            var col = db.GetCollection<NeoVirtFS>("NeoVirtFS");
+
+            if (!_NeoVirtFSSet)
+            {
+                // No reason for parent id to be anything but hashed
+                var indexKeysDefinition = Builders<NeoVirtFS>.IndexKeys.Hashed(idx => idx.ParentId);
+                col.Indexes.CreateOne(new CreateIndexModel<NeoVirtFS>(indexKeysDefinition));
+
+                // For now filename access will also be hashed (no use-case for partial access)
+                indexKeysDefinition = Builders<NeoVirtFS>.IndexKeys.Hashed(idx => idx.Name);
+                col.Indexes.CreateOne(new CreateIndexModel<NeoVirtFS>(indexKeysDefinition));
+
+                _NeoVirtFSSet = true;
+            }
+
+            return col;
         }
         public static IMongoCollection<NeoVirtFSNamespaces> NeoVirtFSNamespaces(this IMongoDatabase db)
         {
@@ -23,30 +39,48 @@ namespace NeoAssets.Mongo
         {
             return db.GetCollection<NeoVirtFSVolumes>("NeoVirtFSVolumes");
         }
+        public static IMongoCollection<NeoVirtFSVolumes> NeoVirtFSSecPrincipals(this IMongoDatabase db)
+        {
+            return db.GetCollection<NeoVirtFSVolumes>("NeoVirtFSSecPrincipals");
+        }
+        public static IMongoCollection<NeoVirtFSVolumes> NeoVirtFSSecACLs(this IMongoDatabase db)
+        {
+            return db.GetCollection<NeoVirtFSVolumes>("NeoVirtFSSecACLs");
+        }
     }
     public class NeoVirtFS
     {
         [BsonId]
-        public ObjectId _id { get; set; }
+        [BsonRequired] public ObjectId _id { get; set; }
+        [BsonRequired] public ObjectId NameSpace { get; set; }
+        [BsonRequired] public ObjectId ParentId { get; set; }  // [Indexed] only rely on these (members are for repair hints)
+        [BsonRequired] public ObjectId[] MemberIds { get; set; }  // Child nodes (of directory)
 
-        [BsonRequired] public byte[] Name { get; set; }
+        [BsonRequired] public byte[] Name { get; set; }         // [Indexed]
 
         [BsonRequired] public NeoVirtFSStat Stat { get; set; }
 
+        [BsonRequired] public NeoVirtFSContent Content { get; set; }
+
+        [BsonIgnoreIfNull] public ObjectId? DirectoryDefaultACL { get; set; }  // Override Default ACL for tree down
+        [BsonIgnoreIfNull] public ObjectId? FileACL { get; set; }            // Non-default ACL for file
+
+        // These simply might get pulled from the asset (or maybe here if get set via xattr calls)
+        [BsonRequired] public NeoVirtFSAttributes Attributes { get; set; }
+    }
+
+    public class NeoVirtFSContent
+    {
+        [BsonRequired] public bool NotAFile { get; set; }           // Also for empty files (though there is a sha1 for that)
         [BsonRequired] public byte[] AssetSHA1 { get; set; }        // File is annealed - hardlink to virtual asset - if > 0 bytes
 
-        // Going to go with a doubly linked list for now.   Need an fsck to fix - probably not much to do with how inodes work on regular filesystems
+        [BsonIgnoreIfNull] public ObjectId? MountedVolume { get; set; }  // Link (like symbolic link) go other volume
+        [BsonIgnoreIfNull] public ObjectId? AtFilePath { get; set; }  // Starting object (object within MountedVolume)
 
-        [BsonRequired] public ObjectId ParentId { get; set; }
-        [BsonRequired] public ObjectId[] MemberIds { get; set; }  // Child nodes (of directory)
+        [BsonIgnoreIfNull] public byte[][] PhysicalFile { get; set; }  // Linkage (split) to physicalfile (though for NARPS they should be the /NARP path)
 
-        [BsonIgnoreIfNull] public ObjectId MountedVolume { get; set; }
-        [BsonIgnoreIfNull] public ObjectId AtFilePath { get; set; }  // Starting directory
-
-        [BsonIgnoreIfNull] public byte[] PhysicalFile { get; set; }  // Linkage to physicalfile
-        [BsonIgnoreIfNull] public byte[] CacheFile { get; set; }    // Path to physical cached file
-
-        [BsonRequired] public NeoVirtFSAttributes Attributes { get; set; }
+        [BsonIgnoreIfNull] public ObjectId? CachePool { get; set; }
+        [BsonIgnoreIfNull] public byte[][] CacheFile { get; set; }    // serialized version of objectId, full path, split
     }
 
     public class NeoVirtFSAttributes
@@ -83,7 +117,7 @@ namespace NeoAssets.Mongo
         [BsonRequired] public DateTimeOffset st_ctim;
         [BsonRequired] public DateTimeOffset st_mtim;
         [BsonRequired] public DateTimeOffset st_atim;
-        [BsonRequired] public DateTimeOffset st_dtim;
+        [BsonRequired] public DateTimeOffset st_dtim;   // When we notice it's deleted
     }
 
     public class NeoVirtFSNamespaces        // First level of heirarchy
@@ -100,10 +134,46 @@ namespace NeoAssets.Mongo
         [BsonRequired] public ObjectId NameSpace { get; set; }  // ObjectId of namespace
         [BsonRequired] public string Name { get; set; }         // Name of Volume
         [BsonRequired] public ObjectId NodeId { get; set; }    // Pointer to NeoVirtFS Directory Node
+        [BsonIgnoreIfNull] public ObjectId? VolumeDefaultACL { get; set; }
     }
 
-    //public class NeoVirtFSSecPrincipals
-    //{
-    //    [BsonId] public ObjectId _id { get; set; }
-    //}
+    public enum NeoVirtFSSecPrincipalTypes
+    {
+        Owner = 1,
+        Role = 2,
+    }
+    public class NeoVirtFSSecPrincipals
+    {
+        [BsonId] public ObjectId _id { get; set; }
+        [BsonRequired] public NeoVirtFSSecPrincipalTypes PrincipalType {get;set;}
+        // Roles assigned to Principal (can also be roles assigned to roles, recursively)
+        // Ultimately this is a union of all
+        [BsonRequired] public ObjectId[] Roles { get; set; }
+    }
+
+    [Flags]
+    public enum NeoVirtFSSecACLOperations
+    {
+        Read = 4,
+        Write = 2,
+        Execute = 1,
+
+        // Put system into different modes (presents helper links) - mostly mapping to narp type
+        MirrorOperation = 8,    // Don't present helpful links to production (so mirror doesn't get confused)
+        SeeDeleted = 16,        // Show deleted files (with flag)
+        SeeArchives = 32,       // Next to archive will be a linkfile to archive extract
+        NoDeleted = 64,         // Don't show deleted files
+    }
+    public class NeoVirtFSSecACLElements
+    {
+        [BsonId] public ObjectId Principal { get; set; }
+        [BsonRequired] public bool Allow { get; set; }  // Default Deny
+        [BsonRequired] public int Operation { get; set; }  // This will be enum flags
+    }
+    public class NeoVirtFSSecACL
+    {
+        [BsonId] public ObjectId _id { get; set; }
+        [BsonRequired] public NeoVirtFSSecACLElements[] Elements { get; set; }
+        [BsonRequired] public bool DefaultAllow { get; set; }  // Default Deny
+    }
 }

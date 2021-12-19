@@ -13,6 +13,7 @@
     <ProjectReference Include="..\NeoAssets\NeoAssets.csproj" />
     <ProjectReference Include="..\NeoCommon\NeoCommon.csproj" />
     <ProjectReference Include="..\PenguinSanitizer\PenguinSanitizer.csproj" />
+    <ProjectReference Include="..\Tmds.Fuse-master\src\Tmds.Fuse\Tmds.Fuse.csproj" />
   </ItemGroup>
 
 </Project>

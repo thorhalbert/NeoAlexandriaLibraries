@@ -73,7 +73,9 @@ namespace NeoCli
         private static string info(FileNode scan)
         {
             if (scan.IsFile)
+            {
                 return $"{scan.FileStat.st_size}";
+            }
             if (scan.IsLnk)
                 return $" link={scan.SymbolicLink.GetString()}";
 

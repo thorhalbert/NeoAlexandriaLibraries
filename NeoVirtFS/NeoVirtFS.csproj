@@ -7,6 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="MongoDB.Driver" Version="2.14.1" />
+    <PackageReference Include="StackExchange.Redis" Version="2.2.88" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NeoAssets\NeoAssets.csproj" />
+    <ProjectReference Include="..\PenguinSanitizer\PenguinSanitizer.csproj" />
     <ProjectReference Include="..\Tmds.Fuse-master\src\Tmds.Fuse\Tmds.Fuse.csproj" />
   </ItemGroup>
 

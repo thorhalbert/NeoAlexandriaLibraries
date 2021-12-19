@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Text;
 using Tmds.Linux;
 using System.Linq;
+using System.Security.Cryptography;
+using Tmds.Fuse;
 
 namespace NeoScry
 {
@@ -81,10 +83,40 @@ namespace NeoScry
                 if (lc < 0)
                     return LibC.errno;
             }
-
-       
-
             return 0;
+        }
+
+
+        public unsafe static byte[] GetSha1(byte[] path)
+        {
+            var ps = PenguinSanitizer.Extensions.ToBytePtr(path);
+            var newFd = LibC.open(ps, LibC.O_RDONLY);
+
+            // Tap the stream so we can get a hash on it.
+
+            var hash = HashAlgorithm.Create("SHA1");
+         
+            var buf = new Byte[32 * 1024 * 1024];
+
+            while (true)
+            {
+                ssize_t rd = 0;
+                fixed (void* b = buf)
+                {
+                    rd = LibC.read(newFd, b, buf.Length);
+
+                    hash.TransformBlock(buf, 0, (int) rd, buf, 0);                  
+                }
+    
+                if (rd < 1)
+                    break;
+            }
+
+            LibC.close(newFd);
+            buf = null;
+
+            hash.TransformFinalBlock(buf, 0, 0);
+            return hash.Hash;
         }
     }
 
@@ -97,6 +129,8 @@ namespace NeoScry
         public ReadOnlyMemory<byte> SymbolicLink { get; internal set; }
 
         public List<FileNode> Members { get; } = new List<FileNode>();
+
+        public byte[] AssetSHA1 { get; set; }
 
         internal unsafe void Load(ReadOnlySpan<byte> startingPath, ReadOnlySpan<byte> name)
         {
