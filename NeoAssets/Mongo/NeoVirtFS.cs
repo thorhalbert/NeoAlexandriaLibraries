@@ -39,13 +39,13 @@ namespace NeoAssets.Mongo
         {
             return db.GetCollection<NeoVirtFSVolumes>("NeoVirtFSVolumes");
         }
-        public static IMongoCollection<NeoVirtFSVolumes> NeoVirtFSSecPrincipals(this IMongoDatabase db)
+        public static IMongoCollection<NeoVirtFSSecPrincipals> NeoVirtFSSecPrincipals(this IMongoDatabase db)
         {
-            return db.GetCollection<NeoVirtFSVolumes>("NeoVirtFSSecPrincipals");
+            return db.GetCollection<NeoVirtFSSecPrincipals>("NeoVirtFSSecPrincipals");
         }
-        public static IMongoCollection<NeoVirtFSVolumes> NeoVirtFSSecACLs(this IMongoDatabase db)
+        public static IMongoCollection<NeoVirtFSSecACL> NeoVirtFSSecACLs(this IMongoDatabase db)
         {
-            return db.GetCollection<NeoVirtFSVolumes>("NeoVirtFSSecACLs");
+            return db.GetCollection<NeoVirtFSSecACL>("NeoVirtFSSecACLs");
         }
     }
     public class NeoVirtFS
@@ -54,7 +54,7 @@ namespace NeoAssets.Mongo
         [BsonRequired] public ObjectId _id { get; set; }
         [BsonRequired] public ObjectId NameSpace { get; set; }
         [BsonRequired] public ObjectId ParentId { get; set; }  // [Indexed] only rely on these (members are for repair hints)
-        [BsonRequired] public ObjectId[] MemberIds { get; set; }  // Child nodes (of directory)
+        [BsonIgnoreIfNull] public ObjectId[] MemberIds { get; set; }  // Child nodes (of directory) - let's stick with parentId for now
 
         [BsonRequired] public byte[] Name { get; set; }         // [Indexed]
 
@@ -66,21 +66,56 @@ namespace NeoAssets.Mongo
         [BsonIgnoreIfNull] public ObjectId? FileACL { get; set; }            // Non-default ACL for file
 
         // These simply might get pulled from the asset (or maybe here if get set via xattr calls)
-        [BsonRequired] public NeoVirtFSAttributes Attributes { get; set; }
+        [BsonIgnoreIfNull] public NeoVirtFSAttributes Attributes { get; set; }
+
+        [BsonRequired] public bool MaintLevel { get; set; }  // If set, is at the maintenance levels, user's can't create things
+
+        public void GetStat(ref stat stat)
+        {
+            Stat.GetStat(ref stat);
+        }
+    }
+
+    public enum VirtFSContentTypes
+    {
+        NotAFile = 10,
+        Asset = 20,
+        MountedVolume = 30,
+        PhysicalFile = 40,
+        CachePool = 50,
     }
 
     public class NeoVirtFSContent
     {
-        [BsonRequired] public bool NotAFile { get; set; }           // Also for empty files (though there is a sha1 for that)
-        [BsonRequired] public byte[] AssetSHA1 { get; set; }        // File is annealed - hardlink to virtual asset - if > 0 bytes
+        [BsonRequired] public VirtFSContentTypes ContentType { get; set; }
 
+        // NotAFile = 10
+        [BsonIgnoreIfNull] public bool NotAFile { get; set; }           // Also for empty files (though there is a sha1 for that)
+
+        // Asset = 20
+        [BsonIgnoreIfNull] public byte[] AssetSHA1 { get; set; }        // File is annealed - hardlink to virtual asset - if > 0 bytes
+
+        // MountedVolume = 30
         [BsonIgnoreIfNull] public ObjectId? MountedVolume { get; set; }  // Link (like symbolic link) go other volume
         [BsonIgnoreIfNull] public ObjectId? AtFilePath { get; set; }  // Starting object (object within MountedVolume)
 
+        // PhysicalFile = 40,
         [BsonIgnoreIfNull] public byte[][] PhysicalFile { get; set; }  // Linkage (split) to physicalfile (though for NARPS they should be the /NARP path)
 
+        // CachePool = 50,
         [BsonIgnoreIfNull] public ObjectId? CachePool { get; set; }
         [BsonIgnoreIfNull] public byte[][] CacheFile { get; set; }    // serialized version of objectId, full path, split
+
+        public static NeoVirtFSContent Dir()
+        {
+            var ret = new NeoVirtFSContent
+            {
+                ContentType = VirtFSContentTypes.NotAFile,
+                NotAFile = true
+            };
+
+            return ret;
+        }
     }
 
     public class NeoVirtFSAttributes
@@ -106,6 +141,7 @@ namespace NeoAssets.Mongo
             st_dtim = DateTimeOffset.MinValue;
         }
 
+      
         [BsonRequired] public UInt64 st_size;
 
         // This until we have more complex security constructs
@@ -118,13 +154,49 @@ namespace NeoAssets.Mongo
         [BsonRequired] public DateTimeOffset st_mtim;
         [BsonRequired] public DateTimeOffset st_atim;
         [BsonRequired] public DateTimeOffset st_dtim;   // When we notice it's deleted
+
+        public static NeoVirtFSStat DirDefault(uint mode = 0b111_101_101)
+        {        
+            var stt = DateTimeOffset.UtcNow;
+
+            var st = new NeoVirtFSStat()
+            {
+                st_size = 0,
+                st_mode = NeoMode_T.S_IFDIR | (NeoMode_T) mode,  // 755
+                st_uid = 10010,
+                st_gid = 10010,
+                st_atim = stt,
+                st_ctim = stt,
+                st_mtim = stt,
+                st_dtim = DateTimeOffset.MinValue,
+            };
+
+            return st;
+        }
+
+        internal void GetStat(ref stat stat)
+        {
+            stat.st_nlink = 1;
+
+            stat.st_size = Convert.ToInt64(st_size);
+
+            stat.st_uid = st_uid;
+            stat.st_gid = st_gid;
+
+            stat.st_mode = st_mode.GetMode();
+
+            stat.st_atim = st_atim.GetTimeSpec();
+            stat.st_ctim = st_ctim.GetTimeSpec();
+            stat.st_mtim = st_mtim.GetTimeSpec();
+        }
     }
 
     public class NeoVirtFSNamespaces        // First level of heirarchy
     {
         [BsonId] public ObjectId _id { get; set; }              // ObjectId of namespace
-        [BsonRequired] public string Namespace { get; set; }    // Namespace (Unicode legal string)
+        [BsonRequired] public string NameSpace { get; set; }    // Namespace (Unicode legal string)
         [BsonRequired] public ObjectId NodeId { get; set; }    // Pointer to NeoVirtFS Directory Node
+        [BsonRequired] public ObjectId ParentId { get; set; }    // Pointer to NeoVirtFS Directory Node
         [BsonIgnoreIfNull] public bool Root { get; set; }       // Is this element the root of the tree
     }
 

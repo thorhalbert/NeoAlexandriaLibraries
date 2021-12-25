@@ -3,6 +3,7 @@ using MongoDB.Driver;
 using NeoRepositories.Mongo;
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Tmds.Fuse;
@@ -13,13 +14,21 @@ namespace NeoFS
     {
         static async Task Main(string[] args)
         {
+            if (args.Length < 2)
+                throw new Exception($"Usage: NeoFS narpv|neovirt mountpoint <fuse-args>");
+
+            var fileType = args[0].ToLowerInvariant();
+            var mountPoint = args[1];
+
+            args = args.Skip(2).ToArray();
+
             var conn = Environment.GetEnvironmentVariable("MONGO_URI");
             var Connection = new MongoClient(conn);
 
             var NeoDb = Connection.GetDatabase("NeoAlexandria");
 
             var narps = NeoDb.NARPs();
-                 
+
             if (!Fuse.CheckDependencies())
             {
                 Console.WriteLine(Fuse.InstallationInstructions);
@@ -28,18 +37,26 @@ namespace NeoFS
 
             // Test to see if we can new a FuseFileInfo
 
-          
+            IFuseFileSystem fileSystem;
 
-            var provisioner = new ProvisionFilesystem();
+            switch (fileType)
+            {
 
+                case "neofs":
 
+                    var provisioner = new ProvisionFilesystem();
+                    fileSystem = provisioner.CreateFs(NeoDb, narps);
 
+                    break;
 
-            //var fileSystem = new NarpMirror_Fuse();  //  provisioner.CreateFs(NeoDb, narps);
-            var fileSystem =  provisioner.CreateFs(NeoDb, narps);
-            //var fileSystem = new Mounter.MemoryFileSystem(); 
+                case "neovirt":
+                    fileSystem = new NeoVirtFS.NeoVirtFS(NeoDb);
+                    break;
 
-            string mountPoint = $"/NARPV";
+                default:
+                    throw new Exception($"Unknown filesystem: {fileType}");
+            }
+      
             System.Console.WriteLine($"Mounting filesystem at {mountPoint}");
 
             Fuse.LazyUnmount(mountPoint);

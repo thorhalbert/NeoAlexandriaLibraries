@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Tmds.Linux;
 
 namespace PenguinSanitizer
 {
@@ -90,6 +91,23 @@ namespace PenguinSanitizer
             toSet |= bits;
 
             return (NeoMode_T) toSet;
+        }
+
+        public static mode_t GetMode(this NeoMode_T convert)
+        {
+            return (mode_t) (uint) convert;
+        }
+
+        public static timespec GetTimeSpec(this DateTimeOffset dto)
+        {
+            var ms = dto.ToUnixTimeMilliseconds();
+
+            var t = new timespec() {
+                tv_sec = ms / 1000L,
+                tv_nsec = (long_t) ((ms % 1000L) * 1000L) 
+            };
+
+            return t;
         }
 
         public static NeoMode_T UnSet(this NeoMode_T toSet, NeoMode_T bits)
