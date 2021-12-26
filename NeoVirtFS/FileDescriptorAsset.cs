@@ -1,25 +1,20 @@
 ﻿using NeoAssets.Mongo;
+using Tmds.Linux;
 
 namespace NeoVirtFS
 {
-    internal class FileDescriptorCache : FileDescriptor
+    internal class FileDescriptorAsset : FileDescriptor, INeoVirtFile
     {
-        public FileDescriptorCache(NeoVirtFSContent Content, INeoVirtFile Handler, bool Create) : base(Content, Handler, Create)
+        public FileDescriptorAsset(NeoAssets.Mongo.NeoVirtFS myFile) : base(myFile)
         {
         }
-    }
-    internal class VirtFileCache : INeoVirtFile
-    {
-        private NeoAssets.Mongo.NeoVirtFS myFile;
 
-        public VirtFileCache(NeoAssets.Mongo.NeoVirtFS myFile)
+        public int Create(FileDescriptor fds, mode_t mode, int flags)
         {
-            this.myFile = myFile;
+            throw new NotImplementedException();
         }
 
-
-
-        public int Open(FileDescriptor fds)
+        public int Open(FileDescriptor fds, int flags)
         {
             throw new NotImplementedException();
         }
@@ -38,5 +33,8 @@ namespace NeoVirtFS
         {
             throw new NotImplementedException();
         }
+
+     
     }
+
 }

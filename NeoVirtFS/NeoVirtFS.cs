@@ -20,6 +20,7 @@ namespace NeoVirtFS
     {
         #region Class Persistence
         IMongoCollection<NeoAssets.Mongo.NeoVirtFS> NeoVirtFSCol;
+        IMongoCollection<NeoAssets.Mongo.NeoVirtFS> NeoVirtFSDeletedCol;
         IMongoCollection<NeoVirtFSNamespaces> NeoVirtFSNamespacesCol;
         IMongoCollection<NeoVirtFSVolumes> NeoVirtFSVolumesCol;
         IMongoCollection<NeoVirtFSSecPrincipals> NeoVirtFSSecPrincipalsCol;
@@ -42,6 +43,7 @@ namespace NeoVirtFS
         {
             // Get wired up to our collections
             NeoVirtFSCol = db.NeoVirtFS();
+            NeoVirtFSDeletedCol = db.NeoVirtFSDeleted();
             NeoVirtFSNamespacesCol = db.NeoVirtFSNamespaces();
             NeoVirtFSVolumesCol = db.NeoVirtFSVolumes();
             NeoVirtFSSecPrincipalsCol = db.NeoVirtFSSecPrincipals();
@@ -438,8 +440,31 @@ namespace NeoVirtFS
             if (error != 0)
                 return -LibC.ENOENT;
 
+            // New files are always cache files, but might have existing file that needs to be deleted
 
-            return base.Create(path, mode, ref fi);
+            var newFile = procs.Pop();
+            if (newFile.Item2 != null)
+            {
+                // Must delete the file
+                fileDelete(newFile.Item2);
+            }
+
+            var parentRec = procs.Pop();
+            if (newFile.Item2 == null) return -LibC.ENOENT;
+            var par = newFile.Item2;
+
+            if (par.MaintLevel) return -LibC.EPERM;
+            
+            // Create new record (new id) and insert
+            var newRec = NeoAssets.Mongo.NeoVirtFS.CreateNewFile(par, newFile.Item1, path, mode);
+
+            var filter = Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x._id, newRec._id);
+            var insert = NeoVirtFSDeletedCol.ReplaceOneAsync(filter, newRec, options: new ReplaceOptions { IsUpsert = true });
+
+            fi.fh = storeHandler(FileDescriptor.FileHandlerFactory(newRec));
+
+            var fds = DescriptorStore[fi.fh];
+            return fds.Handler.Create(fds, mode, fi.flags);
         }
         public override int Open(ReadOnlySpan<byte> path, ref FuseFileInfo fi)
         {
@@ -447,12 +472,24 @@ namespace NeoVirtFS
                 Console.WriteLine($"Open {path.GetString()}");
 
             int error = 0, level = 0;
-            var procs = ProcPath(path, ref error, ref level);
+            var procs = ProcPath(path, ref error, ref level, mustExist : true, isADir: false);
             if (error != 0)
                 return -LibC.ENOENT;
 
+            var newFile = procs.Pop();
+            if (newFile.Item2 == null) return -LibC.ENOENT;
+            var fileRec = newFile.Item2;
 
-            return base.Open(path, ref fi);
+            var parentRec = procs.Pop();
+            if (newFile.Item2 == null) return -LibC.ENOENT;
+            var par = newFile.Item2;
+
+            if (par.MaintLevel) return -LibC.EPERM;
+
+            fi.fh = storeHandler(FileDescriptor.FileHandlerFactory(fileRec));
+
+            var fds = DescriptorStore[fi.fh];
+            return fds.Handler.Open(fds, fi.flags);
         }
         public override int Read(ReadOnlySpan<byte> path, ulong offset, Span<byte> buffer, ref FuseFileInfo fi)
         {
@@ -625,6 +662,24 @@ namespace NeoVirtFS
         #endregion
 
         #region Helper Methods
+
+        private void fileDelete(NeoAssets.Mongo.NeoVirtFS rec)
+        {
+            // Remove file node from main file, move to the deleted list
+
+            // Don't forget to mark the dtim
+
+            rec.Stat.st_dtim = DateTimeOffset.UtcNow;
+
+            // Upsert to the deleted collection  - maybe this should be in a unit of work?
+
+            var filter = Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x._id, rec._id);
+            var insert = NeoVirtFSDeletedCol.ReplaceOneAsync(filter, rec, options: new ReplaceOptions { IsUpsert = true });
+
+            // Remove from the original collection
+
+            NeoVirtFSCol.DeleteOne(filter);
+        }
 
         private void releaseHandler(FileDescriptor fds)
         {

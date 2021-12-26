@@ -1,4 +1,5 @@
-﻿using MongoDB.Bson;
+﻿using Logos.Utility;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using PenguinSanitizer;
@@ -31,6 +32,14 @@ namespace NeoAssets.Mongo
 
             return col;
         }
+
+        public static IMongoCollection<NeoVirtFS> NeoVirtFSDeleted(this IMongoDatabase db)
+        {
+            var col = db.GetCollection<NeoVirtFS>("NeoVirtFSDeleted");
+
+            return col;
+        }
+
         public static IMongoCollection<NeoVirtFSNamespaces> NeoVirtFSNamespaces(this IMongoDatabase db)
         {
             return db.GetCollection<NeoVirtFSNamespaces>("NeoVirtFSNamespaces");
@@ -74,6 +83,22 @@ namespace NeoAssets.Mongo
         {
             Stat.GetStat(ref stat);
         }
+
+        public static NeoVirtFS CreateNewFile(NeoVirtFS par, byte[] name, ReadOnlySpan<byte> path, mode_t mode)
+        {
+            var newRec = new NeoVirtFS
+            {
+                _id = new ObjectId(),
+                Name = name,
+                NameSpace = par.NameSpace,
+                ParentId = par._id,
+                Stat = NeoVirtFSStat.FileDefault((uint) mode),
+                Content = NeoVirtFSContent.NewCache(path),
+                MaintLevel = false
+            };
+
+            return newRec;
+        }
     }
 
     public enum VirtFSContentTypes
@@ -100,11 +125,14 @@ namespace NeoAssets.Mongo
         [BsonIgnoreIfNull] public ObjectId? AtFilePath { get; set; }  // Starting object (object within MountedVolume)
 
         // PhysicalFile = 40,
-        [BsonIgnoreIfNull] public byte[][] PhysicalFile { get; set; }  // Linkage (split) to physicalfile (though for NARPS they should be the /NARP path)
+        [BsonIgnoreIfNull] public byte[] PhysicalFile { get; set; }  // Linkage (split) to physicalfile (though for NARPS they should be the /NARP path)
 
         // CachePool = 50,
-        [BsonIgnoreIfNull] public ObjectId? CachePool { get; set; }
-        [BsonIgnoreIfNull] public byte[][] CacheFile { get; set; }    // serialized version of objectId, full path, split
+      
+        // It was a tossup between using an objectId here and a guid.  
+        // Guid was more positional, so seemed a better way to generate an id
+        [BsonIgnoreIfNull] public Guid? CachePoolGuid { get; set; }
+        [BsonIgnoreIfNull] public byte[] CacheFile { get; set; }    // serialized version of CachePoolGuid, full path, split
 
         public static NeoVirtFSContent Dir()
         {
@@ -115,6 +143,30 @@ namespace NeoAssets.Mongo
             };
 
             return ret;
+        }
+
+        internal static NeoVirtFSContent NewCache(ReadOnlySpan<byte> path)
+        {
+            var fileuuid = GuidUtility.Create(GuidUtility.UrlNamespace, path.ToArray());
+
+            var fileg = fileuuid.ToString().ToLower();
+
+            // 8478e36a-669c-11ec-8541-17df4f57891e
+            // 0123456789012345678901234567890123456789
+            // 000000000011111111112222222222333333333
+
+            // Ultimately will need real pool mechanism here
+
+            var cacheFile = $"/ua/NeoVirtCache/{fileg.Substring(0,2)}/{fileg.Substring(2,2)}/{fileg.Substring(4,2)}/{fileg.Substring(6,2)}/{fileg}";
+
+            var rec = new NeoVirtFSContent
+            {
+                CachePoolGuid = fileuuid,
+                ContentType = VirtFSContentTypes.CachePool,
+                CacheFile = Encoding.UTF8.GetBytes(cacheFile)
+            };
+
+            return rec;
         }
     }
 
@@ -188,6 +240,25 @@ namespace NeoAssets.Mongo
             stat.st_atim = st_atim.GetTimeSpec();
             stat.st_ctim = st_ctim.GetTimeSpec();
             stat.st_mtim = st_mtim.GetTimeSpec();
+        }
+
+        internal static NeoVirtFSStat FileDefault(uint mode = 0b110_100_100)
+        {
+            var stt = DateTimeOffset.UtcNow;
+
+            var st = new NeoVirtFSStat()
+            {
+                st_size = 0,
+                st_mode = NeoMode_T.S_IFREG | (NeoMode_T) mode,  // 644
+                st_uid = 10010,
+                st_gid = 10010,
+                st_atim = stt,
+                st_ctim = stt,
+                st_mtim = stt,
+                st_dtim = DateTimeOffset.MinValue,
+            };
+
+            return st;
         }
     }
 
