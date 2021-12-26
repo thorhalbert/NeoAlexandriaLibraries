@@ -28,6 +28,10 @@ namespace NeoVirtFS
         Dictionary<string, NeoVirtFSNamespaces> NamespaceNames = new Dictionary<string, NeoVirtFSNamespaces>();
         Dictionary<ObjectId, NeoVirtFSNamespaces> Namespaces = new Dictionary<ObjectId, NeoVirtFSNamespaces>();
 
+        ulong FileDescriptorMax = 0;
+        Dictionary<ulong, FileDescriptor> DescriptorStore = new Dictionary<ulong, FileDescriptor>();
+        Dictionary<ulong, bool> DescriptorFree = new Dictionary<ulong, bool>();
+
         int verbosity = 10;
 
         NeoVirtFSNamespaces RootNameSpace = null;
@@ -131,7 +135,8 @@ namespace NeoVirtFS
 
             int error = 0, level=0;
             var procs = ProcPath(path, ref error, ref level);
-
+            if (error != 0)
+                return -LibC.ENOENT;
 
             var last = procs.Pop();
             Console.WriteLine($"   getAttr - last {last.Item1.GetString()} error {last.Item3}");
@@ -153,6 +158,9 @@ namespace NeoVirtFS
 
             int error = 0, level = 0;
             var procs = ProcPath(path, ref error, ref level);
+            if (error != 0)
+                return -LibC.ENOENT;
+
 
             return base.OpenDir(path, ref fi);
         }
@@ -161,6 +169,9 @@ namespace NeoVirtFS
 
             int error = 0, level = 0;
             var procs = ProcPath(path, ref error, ref level, isADir: true);
+            if (error != 0)
+                return -LibC.ENOENT;
+
 
             var last = procs.Pop();
        
@@ -200,6 +211,9 @@ namespace NeoVirtFS
 
             int error = 0, level=0;
             var procs = ProcPath(path, ref error,ref level, isADir: true);
+            if (error != 0)
+                return -LibC.ENOENT;
+
 
             return base.ReleaseDir(path, ref fi);
         }
@@ -211,6 +225,9 @@ namespace NeoVirtFS
 
             int error = 0, level = 0;
             var procs = ProcPath(path, ref error, ref level, mustExist: false, isADir: true);
+            if (error != 0)
+                return -LibC.ENOENT;
+
 
             if (procs.Count < 2)
             {
@@ -249,6 +266,21 @@ namespace NeoVirtFS
             return 0;
         }
 
+        public override int RmDir(ReadOnlySpan<byte> path)
+        {
+            if (verbosity > 0)
+                Console.WriteLine($"RmDir {path.GetString()}");
+
+            int error = 0, level = 0;
+            var procs = ProcPath(path, ref error, ref level, isADir: true);
+            if (error != 0)
+                return -LibC.ENOENT;
+
+            // Check entry to see if it has no children
+
+            return base.RmDir(path);
+        }
+
         public override int Access(ReadOnlySpan<byte> path, mode_t mode)
         {
             if (verbosity > 0)
@@ -256,6 +288,9 @@ namespace NeoVirtFS
 
             int error = 0, level = 0;
             var procs = ProcPath(path, ref error, ref level);
+            if (error != 0)
+                return -LibC.ENOENT;
+
 
             return base.Access(path, mode);
         }
@@ -266,8 +301,22 @@ namespace NeoVirtFS
 
             int error = 0, level = 0;
             var procs = ProcPath(path, ref error, ref level);
+            if (error != 0)
+                return -LibC.ENOENT;
 
-            return base.ChMod(path, mode, fiRef);
+            var ent = procs.Pop();
+            if (ent.Item2 == null) return -LibC.ENOENT;
+
+            var rec = ent.Item2;
+
+            if (rec.MaintLevel) return -LibC.EPERM;
+
+            var update = new UpdateDefinitionBuilder<NeoAssets.Mongo.NeoVirtFS>()
+                  .Set(rec => rec.Stat.st_mode, (NeoMode_T) (uint) mode);
+
+            var result = NeoVirtFSCol.UpdateOne(Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x._id, rec._id), update);
+
+            return 0;
         }
         public override int Chown(ReadOnlySpan<byte> path, uint uid, uint gid, FuseFileInfoRef fiRef)
         {
@@ -276,19 +325,13 @@ namespace NeoVirtFS
 
             int error = 0, level = 0;
             var procs = ProcPath(path, ref error, ref level);
+            if (error != 0)
+                return -LibC.ENOENT;
+
 
             return base.Chown(path, uid, gid, fiRef);
         }
-        public override int Create(ReadOnlySpan<byte> path, mode_t mode, ref FuseFileInfo fi)
-        {
-            if (verbosity > 0)
-                Console.WriteLine($"Create {path.GetString()}");
-
-            int error = 0, level = 0;
-            var procs = ProcPath(path, ref error, ref level);
-
-            return base.Create(path, mode, ref fi);
-        }
+       
         public override int FAllocate(ReadOnlySpan<byte> path, int mode, ulong offset, long length, ref FuseFileInfo fi)
         {
             if (verbosity > 0)
@@ -296,6 +339,9 @@ namespace NeoVirtFS
 
             int error = 0, level = 0;
             var procs = ProcPath(path, ref error, ref level);
+            if (error != 0)
+                return -LibC.ENOENT;
+
 
             return base.FAllocate(path, mode, offset, length, ref fi);
         }
@@ -306,6 +352,9 @@ namespace NeoVirtFS
 
             int error = 0, level = 0;
             var procs = ProcPath(path, ref error, ref level);
+            if (error != 0)
+                return -LibC.ENOENT;
+
 
             return base.Flush(path, ref fi);
         }
@@ -316,6 +365,9 @@ namespace NeoVirtFS
 
             int error = 0, level = 0;
             var procs = ProcPath(path, ref error, ref level);
+            if (error != 0)
+                return -LibC.ENOENT;
+
 
             return base.FSync(path, ref fi);
         }
@@ -328,6 +380,9 @@ namespace NeoVirtFS
 
             int error = 0, level = 0;
             var procs = ProcPath(fromPath, ref error, ref level);
+            if (error != 0)
+                return -LibC.ENOENT;
+
 
             return base.Link(fromPath, toPath);
         }
@@ -338,9 +393,13 @@ namespace NeoVirtFS
 
             int error = 0, level = 0;
             var procs = ProcPath(path, ref error, ref level);
+            if (error != 0)
+                return -LibC.ENOENT;
+
 
             return base.Unlink(path);
         }
+
         public override int SymLink(ReadOnlySpan<byte> path, ReadOnlySpan<byte> target)
         {
             if (verbosity > 0)
@@ -348,6 +407,9 @@ namespace NeoVirtFS
 
             int error = 0, level = 0;
             var procs = ProcPath(path, ref error, ref level);
+            if (error != 0)
+                return -LibC.ENOENT;
+
 
             return base.SymLink(path, target);
         }
@@ -358,12 +420,27 @@ namespace NeoVirtFS
 
             int error = 0, level = 0;
             var procs = ProcPath(path, ref error, ref level);
+            if (error != 0)
+                return -LibC.ENOENT;
+
 
             return base.ReadLink(path, buffer);
         }
 
 
+        public override int Create(ReadOnlySpan<byte> path, mode_t mode, ref FuseFileInfo fi)
+        {
+            if (verbosity > 0)
+                Console.WriteLine($"Create {path.GetString()}");
 
+            int error = 0, level = 0;
+            var procs = ProcPath(path, ref error, ref level);
+            if (error != 0)
+                return -LibC.ENOENT;
+
+
+            return base.Create(path, mode, ref fi);
+        }
         public override int Open(ReadOnlySpan<byte> path, ref FuseFileInfo fi)
         {
             if (verbosity > 0)
@@ -371,6 +448,9 @@ namespace NeoVirtFS
 
             int error = 0, level = 0;
             var procs = ProcPath(path, ref error, ref level);
+            if (error != 0)
+                return -LibC.ENOENT;
+
 
             return base.Open(path, ref fi);
         }
@@ -379,21 +459,28 @@ namespace NeoVirtFS
             if (verbosity > 0)
                 Console.WriteLine($"Read {path.GetString()}");
 
-            int error = 0, level = 0;
-            var procs = ProcPath(path, ref error, ref level);
-
-            return base.Read(path, offset, buffer, ref fi);
+            var fds = DescriptorStore[fi.fh];
+            return fds.Handler.Read(fds, offset, buffer);
         }
         public override int Write(ReadOnlySpan<byte> path, ulong off, ReadOnlySpan<byte> span, ref FuseFileInfo fi)
         {
             if (verbosity > 0)
                 Console.WriteLine($"Write {path.GetString()}");
 
-            int error = 0, level = 0;
-            var procs = ProcPath(path, ref error, ref level);
-
-            return base.Write(path, off, span, ref fi);
+            var fds = DescriptorStore[fi.fh];
+            return fds.Handler.Write(fds, off, span);
         }
+        public override void Release(ReadOnlySpan<byte> path, ref FuseFileInfo fi)
+        {
+            if (verbosity > 0)
+                Console.WriteLine($"Release {path.GetString()}");
+
+            var fds = DescriptorStore[fi.fh];
+            fds.Handler.Release(fds);
+
+            releaseHandler(fds);
+        }
+
         public override int Truncate(ReadOnlySpan<byte> path, ulong length, FuseFileInfoRef fiRef)
         {
             if (verbosity > 0)
@@ -401,22 +488,15 @@ namespace NeoVirtFS
 
             int error = 0, level = 0;
             var procs = ProcPath(path, ref error, ref level);
+            if (error != 0)
+                return -LibC.ENOENT;
+
 
             return base.Truncate(path, length, fiRef);
         }
-        public override void Release(ReadOnlySpan<byte> path, ref FuseFileInfo fi)
-        {
-            if (verbosity > 0)
-                Console.WriteLine($"Release {path.GetString()}");
+     
 
-            int error = 0, level = 0;
-            var procs = ProcPath(path, ref error, ref level);
-
-            base.Release(path, ref fi);
-        }
-
-
-      
+       
         public override int Rename(ReadOnlySpan<byte> path, ReadOnlySpan<byte> newPath, int flags)
         {
             if (verbosity > 0)
@@ -424,20 +504,25 @@ namespace NeoVirtFS
 
             int error = 0, level = 0;
             var procs = ProcPath(path, ref error, ref level);
+            if (error != 0)
+                return -LibC.ENOENT;
+
+            // Can't rename something with a MaintLevel parent
+           
+
+            var newFile = ProcPath(newPath, ref error, ref level);
+            if (newFile.Count != level)
+                return -LibC.ENOENT;
+
+            // Can't rename something into a MaintLevel parent
+
+            // But for now we'll set somebody move something from one volume to another +/- auth
+
 
             return base.Rename(path, newPath, flags);
         }
 
-        public override int RmDir(ReadOnlySpan<byte> path)
-        {
-            if (verbosity > 0)
-                Console.WriteLine($"RmDir {path.GetString()}");
 
-            int error = 0, level = 0;
-            var procs = ProcPath(path, ref error, ref level, isADir: true);
-
-            return base.RmDir(path);
-        }
         public override int FSyncDir(ReadOnlySpan<byte> path, bool onlyData, ref FuseFileInfo fi)
         {
             if (verbosity > 0)
@@ -453,6 +538,8 @@ namespace NeoVirtFS
 
             int error = 0, level = 0;
             var procs = ProcPath(path, ref error, ref level);
+            if (error != 0)
+                return -LibC.ENOENT;
 
             return base.ListXAttr(path, list);
         }
@@ -463,6 +550,9 @@ namespace NeoVirtFS
 
             int error = 0, level = 0;
             var procs = ProcPath(path, ref error, ref level);
+            if (error != 0)
+                return -LibC.ENOENT;
+
 
             return base.RemoveXAttr(path, name);
         }
@@ -473,6 +563,9 @@ namespace NeoVirtFS
 
             int error = 0, level = 0;
             var procs = ProcPath(path, ref error, ref level);
+            if (error != 0)
+                return -LibC.ENOENT;
+
 
             return base.GetXAttr(path, name, data);
         }
@@ -483,6 +576,9 @@ namespace NeoVirtFS
 
             int error = 0, level = 0;
             var procs = ProcPath(path, ref error, ref level);
+            if (error != 0)
+                return -LibC.ENOENT;
+
 
             return base.SetXAttr(path, name, data, flags);
         }
@@ -495,26 +591,75 @@ namespace NeoVirtFS
 
             int error = 0,level=0;
             var procs = ProcPath(path, ref error, ref level, isADir: true);
+            if (error != 0)
+                return -LibC.ENOENT;
+
 
             return base.StatFS(path, ref statfs);
         }
 
-
-
         public override int UpdateTimestamps(ReadOnlySpan<byte> path, ref timespec atime, ref timespec mtime, FuseFileInfoRef fiRef)
         {
             if (verbosity > 0)
-                Console.WriteLine($"UpdateTimestamps {path.GetString()}");
+                Console.WriteLine($"UpdateTimestamps {path.GetString()} atime={atime.ToDTO()} mtime={atime.ToDTO()}");
 
             int error = 0, level = 0;
             var procs = ProcPath(path, ref error, ref level);
+            if (error != 0)
+                return -LibC.ENOENT;
 
-            return base.UpdateTimestamps(path, ref atime, ref mtime, fiRef);
+            var ent = procs.Pop();
+            if (ent.Item2 == null) return -LibC.ENOENT;
+
+            var rec = ent.Item2;
+
+            var update = new UpdateDefinitionBuilder<NeoAssets.Mongo.NeoVirtFS>()
+                  .Set(rec => rec.Stat.st_atim, atime.ToDTO())
+                  .Set(rec => rec.Stat.st_mtim, mtime.ToDTO());
+
+            var result = NeoVirtFSCol.UpdateOne(Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x._id, rec._id), update);
+
+            return 0;
         }
 
         #endregion
 
         #region Helper Methods
+
+        private void releaseHandler(FileDescriptor fds)
+        {
+            var fd = fds.fd;
+            lock (DescriptorStore)
+            {
+                DescriptorFree[fd] = true;
+                DescriptorStore.Remove(fd);
+            }
+        }
+
+        private ulong storeHandler(FileDescriptor fds)
+        {
+            lock (DescriptorStore)
+            {
+                ulong fd = 0;
+                if (DescriptorFree.Count > 0)
+                {
+                    fd = DescriptorFree.Keys.First();
+                    DescriptorFree.Remove(fd);
+
+                    DescriptorStore[fd] = fds;
+                    fds.fd = fd;
+
+                    return fd;
+                }
+
+                fd = FileDescriptorMax++;
+                DescriptorStore[fd] = fds;
+                fds.fd = fd;
+
+                return fd;
+            }
+        }
+
         private Stack<Tuple<byte[], NeoAssets.Mongo.NeoVirtFS?, int>> ProcPath(ReadOnlySpan<byte> path, ref int error, ref int outLevel, bool mustExist = true, bool isADir = false)
         {
             error = 0;
@@ -575,6 +720,8 @@ namespace NeoVirtFS
 
             // Now we walk down
 
+            var notFound = 0;
+
             foreach (var level in retA)
             {
                 Console.WriteLine($"  - Get {level.GetString()} Parent={node._id}");
@@ -582,18 +729,35 @@ namespace NeoVirtFS
                      Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x.Name, level);
 
                 node = NeoVirtFSCol.FindSync(filter).FirstOrDefault();
-                error = node == null ? LibC.ENOENT : 0;
-
-                stack.Push(new Tuple<byte[], NeoAssets.Mongo.NeoVirtFS?, int>(level, node, error));
+                error = 0;
 
                 if (node == null)
-                    return stack;
+                {
+                    error = LibC.ENOENT;
+                    notFound++;
+                }
 
-                // We need a better error if we can't go all the way to the end
+                stack.Push(new Tuple<byte[], NeoAssets.Mongo.NeoVirtFS?, int>(level, node, error));
             }
 
-            Console.WriteLine($"Found: {node.Name.GetString()} Id {node._id}");
+            Console.WriteLine($"Found: {node.Name.GetString()} Id {node._id} NotFound={notFound}");
 
+            switch (notFound)
+            {
+                case 0:     // Everything found
+                    error = 0;
+                    break;
+                case 1:     // Last thing found (which is typical)
+                    if (mustExist)
+                        error = LibC.ENOENT;
+                    else
+                        error = 0;
+                    break;
+                default:    // Multiple things not found - which is almost always bad
+                    error = LibC.ENOENT;
+                    break;
+            }
+                    
             return stack;
         }
 
