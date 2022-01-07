@@ -57,6 +57,15 @@ namespace NeoAssets.Mongo
             return db.GetCollection<NeoVirtFSSecACL>("NeoVirtFSSecACLs");
         }
     }
+
+    public enum DeleteTypes
+    {
+        TRUNC = 1,
+        UNLINK = 2,
+        CREATE = 3,
+        RENAMEOVER = 4,
+        RMDIR = 5,
+    }
     public class NeoVirtFS
     {
         [BsonId]
@@ -66,6 +75,7 @@ namespace NeoAssets.Mongo
         [BsonIgnoreIfNull] public ObjectId[] MemberIds { get; set; }  // Child nodes (of directory) - let's stick with parentId for now
 
         [BsonRequired] public byte[] Name { get; set; }         // [Indexed]
+        [BsonRequired] public int Version { get; set; } = 1;
 
         [BsonRequired] public NeoVirtFSStat Stat { get; set; }
 
@@ -73,31 +83,135 @@ namespace NeoAssets.Mongo
 
         [BsonIgnoreIfNull] public ObjectId? DirectoryDefaultACL { get; set; }  // Override Default ACL for tree down
         [BsonIgnoreIfNull] public ObjectId? FileACL { get; set; }            // Non-default ACL for file
+        [BsonIgnoreIfNull] public DeleteTypes DeleteType { get; set; }      // What are we deleted (also implies that we are deleted)
+
 
         // These simply might get pulled from the asset (or maybe here if get set via xattr calls)
         [BsonIgnoreIfNull] public NeoVirtFSAttributes Attributes { get; set; }
 
         [BsonRequired] public bool MaintLevel { get; set; }  // If set, is at the maintenance levels, user's can't create things
+        public bool IsDirectory {
+            get {
+                return Stat.IsDirectory;
+            }
+        }
+        public bool IsFile {
+            get {
+                return Stat.IsFile;
+            }
+        }
 
         public void GetStat(ref stat stat)
         {
             Stat.GetStat(ref stat);
         }
+        public void GetStat(ref stat stat, stat nstat)
+        {
+            Stat.GetStat(ref stat, nstat);
+        }
 
         public static NeoVirtFS CreateNewFile(NeoVirtFS par, byte[] name, ReadOnlySpan<byte> path, mode_t mode)
         {
+            var id = ObjectId.GenerateNewId();
+
+            Console.WriteLine($"Set newId for file to {id}");
             var newRec = new NeoVirtFS
             {
-                _id = new ObjectId(),
+                _id = id, 
                 Name = name,
                 NameSpace = par.NameSpace,
                 ParentId = par._id,
                 Stat = NeoVirtFSStat.FileDefault((uint) mode),
-                Content = NeoVirtFSContent.NewCache(path),
+                Content = NeoVirtFSContent.NewCache(path, id),
                 MaintLevel = false
             };
 
             return newRec;
+        }
+
+        public byte[] GetStatPhysical()
+        {
+            switch (Content.ContentType)
+            {
+                case VirtFSContentTypes.NotAFile:
+                    return null;
+                case VirtFSContentTypes.Asset:
+                    return null;
+                case VirtFSContentTypes.MountedVolume:
+                    return null;
+                case VirtFSContentTypes.PhysicalFile:
+                    return Content.PhysicalFile;
+                case VirtFSContentTypes.CachePool:
+                    return Content.CacheFile;
+            }
+
+            return null;
+        }
+
+        public NeoVirtFS MakeLink(NeoVirtFS par, byte[] newFile)
+        {
+            var ret = (NeoVirtFS) this.MemberwiseClone();
+
+            // New Record
+            ret._id = ObjectId.GenerateNewId();
+
+            // Reparent
+            ret.NameSpace = par.NameSpace;
+            ret.ParentId = par._id;
+
+            // New name
+            ret.Name = newFile;
+         
+            return ret;
+        }
+
+        public List<Byte[]> GetAttributes()
+        {
+            var ret = new List<Byte[]>();
+
+            // Return fixed attributes
+            ret.Add(Encoding.ASCII.GetBytes("_id"));
+            ret.Add(Encoding.ASCII.GetBytes("Version"));
+            ret.Add(Encoding.ASCII.GetBytes("NameSpace"));
+
+            // Return content based attributes
+            Content.GetAttributeList(ret);
+
+            // Return dynamic attributes
+            foreach (var a in Attributes.Elements)
+                ret.Add(Encoding.ASCII.GetBytes(a.Name));
+            
+            return ret;
+        }
+
+        public void Rename(NeoVirtFS par, byte[] newFile)
+        {
+            Console.WriteLine($"Rename to {newFile.GetString()} on Parent {par.Name.GetString()}");
+
+            // We're getting attached to par and renamed
+
+            Name = newFile;
+
+            // Pull in parent stuff
+
+            NameSpace = par.NameSpace;
+            ParentId = par._id;
+
+        }
+
+        public unsafe int  Truncate(ulong length)
+        {
+            switch (Content.ContentType)
+            {
+                case VirtFSContentTypes.CachePool:
+
+                    var res = LibC.truncate(Content.CacheFile.ToBytePtr(), (long) length);
+
+                    if (res < 0) res = -LibC.errno;
+                    return res;
+            }
+
+            return -LibC.EPERM;
         }
     }
 
@@ -145,7 +259,7 @@ namespace NeoAssets.Mongo
             return ret;
         }
 
-        internal static NeoVirtFSContent NewCache(ReadOnlySpan<byte> path)
+        internal static NeoVirtFSContent NewCache(ReadOnlySpan<byte> path, ObjectId nodeObj)
         {
             var fileuuid = GuidUtility.Create(GuidUtility.UrlNamespace, path.ToArray());
 
@@ -157,7 +271,7 @@ namespace NeoAssets.Mongo
 
             // Ultimately will need real pool mechanism here
 
-            var cacheFile = $"/ua/NeoVirtCache/{fileg.Substring(0,2)}/{fileg.Substring(2,2)}/{fileg.Substring(4,2)}/{fileg.Substring(6,2)}/{fileg}";
+            var cacheFile = $"/ua/NeoVirtCache/{fileg.Substring(0,2)}/{fileg.Substring(2,2)}/{fileg.Substring(4,2)}/{fileg.Substring(6,2)}/{fileg}_{nodeObj}";
 
             var rec = new NeoVirtFSContent
             {
@@ -167,6 +281,30 @@ namespace NeoAssets.Mongo
             };
 
             return rec;
+        }
+
+        internal void GetAttributeList(List<byte[]> ret)
+        {
+           switch (ContentType)
+            {
+                case VirtFSContentTypes.NotAFile:
+                    break;
+                case VirtFSContentTypes.Asset:  // Annealed files
+                    exposeAsset(AssetSHA1, ret);                
+                    // If we load the asset, we might expose many of the asset attributes, at least hashes and file types
+                    break;
+
+                case VirtFSContentTypes.MountedVolume:
+
+                // The following also might conceivably have a hash (not annealed yet) - expose Asset attributes
+                case VirtFSContentTypes.CachePool:
+                case VirtFSContentTypes.PhysicalFile:
+                    break;
+            }
+        }
+        private void exposeAsset(byte[] assetSHA1, List<byte[]> ret)
+        {
+            ret.Add(Encoding.ASCII.GetBytes("HASH.SHA1"));
         }
     }
 
@@ -207,6 +345,12 @@ namespace NeoAssets.Mongo
         [BsonRequired] public DateTimeOffset st_atim;
         [BsonRequired] public DateTimeOffset st_dtim;   // When we notice it's deleted
 
+        // Expose possible captured hashes - invalidate on write
+        [BsonIgnoreIfNull] public Dictionary<string, Byte[]> Hashes { get; set; }
+
+        public bool IsDirectory { get { return (st_mode & NeoMode_T.S_IFDIR) != 0; } }
+        public bool IsFile { get { return (st_mode & NeoMode_T.S_IFREG) != 0; } }
+
         public static NeoVirtFSStat DirDefault(uint mode = 0b111_101_101)
         {        
             var stt = DateTimeOffset.UtcNow;
@@ -231,6 +375,26 @@ namespace NeoAssets.Mongo
             stat.st_nlink = 1;
 
             stat.st_size = Convert.ToInt64(st_size);
+            stat.st_blksize = 4096;
+            stat.st_blocks = (blkcnt_t) (long) (stat.st_size << 12);
+
+            stat.st_uid = st_uid;
+            stat.st_gid = st_gid;
+
+            stat.st_mode = st_mode.GetMode();
+
+            stat.st_atim = st_atim.GetTimeSpec();
+            stat.st_ctim = st_ctim.GetTimeSpec();
+            stat.st_mtim = st_mtim.GetTimeSpec();
+        }
+
+        internal void GetStat(ref stat stat, stat inStats)
+        {
+            stat.st_nlink = 1;
+
+            stat.st_size = Convert.ToInt64(inStats.st_size);
+            stat.st_blksize = inStats.st_blksize;
+            stat.st_blocks = inStats.st_blocks;
 
             stat.st_uid = st_uid;
             stat.st_gid = st_gid;
