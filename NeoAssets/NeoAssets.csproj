@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NeoCommon\NeoCommon.csproj" />
+    <ProjectReference Include="..\NeoRepositories\NeoRepositories.csproj" />
     <ProjectReference Include="..\PenguinSanitizer\PenguinSanitizer.csproj" />
   </ItemGroup>
 

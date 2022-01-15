@@ -13,6 +13,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\BakedFileService\BakedFileService.csproj" />
+    <ProjectReference Include="..\NeoRepositories\NeoRepositories.csproj" />
     <ProjectReference Include="..\NeoScry\NeoScry.csproj" />
     <ProjectReference Include="..\PenguinSanitizer\PenguinSanitizer.csproj" />
   </ItemGroup>

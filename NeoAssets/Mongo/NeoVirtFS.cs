@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Tmds.Linux;
+using NeoRepositories.Mongo;
 
 namespace NeoAssets.Mongo
 {
@@ -81,6 +82,8 @@ namespace NeoAssets.Mongo
 
         [BsonRequired] public NeoVirtFSContent Content { get; set; }
 
+        [BsonIgnoreIfNull] public string NARPImport { get; set; }
+
         [BsonIgnoreIfNull] public ObjectId? DirectoryDefaultACL { get; set; }  // Override Default ACL for tree down
         [BsonIgnoreIfNull] public ObjectId? FileACL { get; set; }            // Non-default ACL for file
         [BsonIgnoreIfNull] public DeleteTypes DeleteType { get; set; }      // What are we deleted (also implies that we are deleted)
@@ -127,6 +130,90 @@ namespace NeoAssets.Mongo
             };
 
             return newRec;
+        }
+
+        public static bool PullNamespacesAndVolumes(IMongoDatabase db,
+            ref Dictionary<string, NeoVirtFSNamespaces> NamespaceNames,
+            ref Dictionary<ObjectId, NeoVirtFSNamespaces> Namespaces,
+            ref NeoVirtFSNamespaces RootNameSpace)
+        {
+            bool HaveRoot = false;
+
+            var NeoVirtFSCol = db.NeoVirtFS();
+            var NeoVirtFSDeletedCol = db.NeoVirtFSDeleted();
+            var NeoVirtFSNamespacesCol = db.NeoVirtFSNamespaces();
+            var NeoVirtFSVolumesCol = db.NeoVirtFSVolumes();
+            var NeoVirtFSSecPrincipalsCol = db.NeoVirtFSSecPrincipals();
+            var NeoVirtFSSecACLsCol = db.NeoVirtFSSecACLs();
+
+            // Prepare for bulk update
+
+            var updates = new List<WriteModel<NeoAssets.Mongo.NeoVirtFS>>();
+
+            // Load up the namespaces -- there just shouldn't be too many of these
+
+            var names = NeoVirtFSNamespacesCol.FindSync(Builders<NeoVirtFSNamespaces>.Filter.Empty).ToList();
+            foreach (var n in names)
+            {
+                NamespaceNames[n.NameSpace] = n;
+                Namespaces[n._id] = n;
+
+                Console.WriteLine($"Namespace: {n.NameSpace}");
+
+                if (n.Root)
+                {
+                    RootNameSpace = n;
+                    HaveRoot = true;
+                    n.ParentId = ObjectId.Empty;  // Until I figure out how to set this
+                }
+
+                // Ensure that the filesystem nodes exist at the top level
+
+                FilterDefinition<NeoAssets.Mongo.NeoVirtFS> filter = Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x._id, n._id);
+
+                var upd = new UpdateDefinitionBuilder<NeoAssets.Mongo.NeoVirtFS>()
+                    .Set("_id", n._id)
+                    .SetOnInsert("Content", NeoVirtFSContent.Dir())
+                    .SetOnInsert("Stat", NeoVirtFSStat.DirDefault())
+                    .Set("NameSpace", n._id)
+                    .Set("ParentId", n.ParentId) // Set's see what root does
+                    .Set("Name", Encoding.UTF8.GetBytes(n.NameSpace))
+                    .Set("MaintLevel", true);
+
+                UpdateOneModel<NeoAssets.Mongo.NeoVirtFS> update = new UpdateOneModel<NeoAssets.Mongo.NeoVirtFS>(filter, upd) { IsUpsert = true };
+                updates.Add(update);
+            }
+
+            // Now do volumes
+
+            var volumes = NeoVirtFSVolumesCol.FindSync(Builders<NeoVirtFSVolumes>.Filter.Empty).ToList();
+            foreach (var v in volumes)
+            {
+
+                Console.WriteLine($"Volume: {v.Name}");
+
+                // Ensure that the filesystem nodes exist at the top level
+
+                FilterDefinition<NeoAssets.Mongo.NeoVirtFS> filter = Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x._id, v._id);
+
+                var upd = new UpdateDefinitionBuilder<NeoAssets.Mongo.NeoVirtFS>()
+                    .Set("_id", v._id)
+                    .SetOnInsert("Content", NeoVirtFSContent.Dir())
+                    .SetOnInsert("Stat", NeoVirtFSStat.DirDefault())
+                    .Set("NameSpace", v.NameSpace)
+                    .Set("ParentId", Namespaces[v.NameSpace]._id) // Set's see what root does
+                    .Set("Name", Encoding.UTF8.GetBytes(v.Name))
+                    .Set("MaintLevel", false);    // This is the volume level - users can do stuff here (by their policy)
+
+                UpdateOneModel<NeoAssets.Mongo.NeoVirtFS> update = new UpdateOneModel<NeoAssets.Mongo.NeoVirtFS>(filter, upd) { IsUpsert = true };
+                updates.Add(update);
+            }
+
+            // Persist
+
+            NeoVirtFSCol.BulkWrite(updates);
+
+            return HaveRoot;
         }
 
         public byte[] GetStatPhysical()
@@ -331,7 +418,22 @@ namespace NeoAssets.Mongo
             st_dtim = DateTimeOffset.MinValue;
         }
 
-      
+        public NeoVirtFSStat(AssetFiles_Stat stat)
+        {
+            st_size = Convert.ToUInt64(stat.size);
+
+            st_uid = stat.uid;
+            st_gid = stat.gid;
+
+            st_mode = (NeoMode_T) Convert.ToUInt32(stat.mode);
+
+            st_ctim = DateTimeOffset.FromUnixTimeMilliseconds(stat.ctime);
+            st_mtim = DateTimeOffset.FromUnixTimeMilliseconds(stat.mtime);
+            st_atim = DateTimeOffset.FromUnixTimeMilliseconds(stat.atime);
+
+            st_dtim = DateTimeOffset.MinValue;
+        }
+
         [BsonRequired] public UInt64 st_size;
 
         // This until we have more complex security constructs
@@ -367,7 +469,17 @@ namespace NeoAssets.Mongo
                 st_dtim = DateTimeOffset.MinValue,
             };
 
-            return st;
+            return st; 
+        }
+
+        // Cast us to a file type 
+        public NeoVirtFSStat ToFile()
+        {
+            var newFile = (NeoVirtFSStat) this.MemberwiseClone();
+
+            newFile.st_mode = NeoMode_T.S_IFREG | (st_mode & (~NeoMode_T.S_IFMT));
+
+            return newFile;
         }
 
         internal void GetStat(ref stat stat)

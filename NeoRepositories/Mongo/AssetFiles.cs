@@ -36,8 +36,35 @@ namespace NeoRepositories.Mongo
         [BsonIgnoreIfNull] public string LastRealPath { get; set; } // 147060/2000000
         [BsonIgnoreIfNull] public BsonDocument History { get; set; }   // 10258/2000000
 
+        // Old Schema
+        [BsonIgnoreIfNull] public long CTime { get; set; }
+        [BsonIgnoreIfNull] public long MTime { get; set; }
+        [BsonIgnoreIfNull] public long ATime { get; set; }
+        [BsonIgnoreIfNull] public uint Size { get; set; }
+        [BsonIgnoreIfNull] public uint Mode { get; set; }
+
+
         [BsonExtraElements] public BsonDocument _CatchAll { get; set; }
+
+        public void CheckStat()
+        {
+            // Recover from old format
+            if (Stat == null)
+                Stat = new AssetFiles_Stat
+                {
+                    ctime = CTime,
+                    mtime = MTime,
+                    atime = ATime,
+                    size = Size,
+                    mode = Mode,
+                    gid = 10010,
+                    uid = 10010
+                };
+
+        }
     }
+
+  
 
     public class AssetFiles_Stat
     {

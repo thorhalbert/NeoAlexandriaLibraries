@@ -15,10 +15,11 @@ namespace NeoScry
         public static readonly byte[] pathSep = new byte[] { (byte) '/' };
         public static readonly byte[] dot = new byte[] { (byte) '.' };
         public static readonly byte[] dotdot = new byte[] { (byte) '.', (byte) '.' };
+        public static readonly byte[] archive = new byte[] { (byte) 'A', (byte) 'R', (byte) 'C', (byte) '-' };
 
         public static List<ReadOnlyMemory<byte>> Scan(ReadOnlySpan<byte> path)
         {
-            Console.WriteLine($"Scan: {path.GetString()}");
+            //Console.WriteLine($"Scan: {path.GetString()}");
             var dirFd = RawDirs.opendir(RawDirs.ToNullTerm(path.ToArray()));
             if (dirFd == IntPtr.Zero)
                 throw new Exception($"Error opening directory {path.GetString()} - {LibC.errno}");
@@ -62,6 +63,8 @@ namespace NeoScry
                 if (f.Span.SequenceEqual(dot)) continue;
                 if (f.Span.SequenceEqual(dotdot)) continue;
 
+                if (SequenceStartsWith(f,archive)) continue;
+
                 // This surely sucks - got to be better ways to do this. -- Need bytebuilder
                 var newPath = startingPath.ToArray().Concat(pathSep.ToArray()).Concat(f.ToArray()).ToArray();
 
@@ -73,6 +76,21 @@ namespace NeoScry
             }
 
             return fn;
+        }
+
+        private static bool SequenceStartsWith(ReadOnlyMemory<byte> f, byte[] cmp)
+        {
+            var ba = f.ToArray();
+
+            if (ba.Length < cmp.Length) return false;
+
+            for (var i=0;i<cmp.Length; i++ )
+            {
+                if (cmp[i] != ba[i]) return false;
+            }
+
+            return true;
+
         }
 
         public unsafe static int Stat(ReadOnlySpan<byte> path, ref stat newStat)
@@ -130,7 +148,7 @@ namespace NeoScry
 
         public List<FileNode> Members { get; } = new List<FileNode>();
 
-        public byte[] AssetSHA1 { get; set; }
+        //public byte[] AssetSHA1 { get; set; }
 
         internal unsafe void Load(ReadOnlySpan<byte> startingPath, ReadOnlySpan<byte> name)
         {

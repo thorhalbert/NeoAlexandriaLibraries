@@ -26,14 +26,17 @@ namespace NeoVirtFS
             this.Handler = (INeoVirtFile) this;
         }
 
-        public static FileDescriptor FileHandlerFactory(NeoAssets.Mongo.NeoVirtFS myFile)
+        public static FileDescriptor FileHandlerFactory(NeoAssets.Mongo.NeoVirtFS myFile, 
+            MongoDB.Driver.IMongoDatabase db, 
+            MongoDB.Driver.IMongoCollection<NeoBakedVolumes.Mongo.BakedAssets> bac,
+            MongoDB.Driver.IMongoCollection<NeoBakedVolumes.Mongo.BakedVolumes> bvol)
         {
             switch (myFile.Content.ContentType)
             {
                 case VirtFSContentTypes.NotAFile:
                     return new FileDescriptorNotFile(myFile);
                 case VirtFSContentTypes.Asset:
-                    return new FileDescriptorAsset(myFile);
+                    return new FileDescriptorAsset(myFile, db, bac, bvol);
                 case VirtFSContentTypes.MountedVolume:
                     return new FileDescriptorMounted(myFile);
                 case VirtFSContentTypes.PhysicalFile:

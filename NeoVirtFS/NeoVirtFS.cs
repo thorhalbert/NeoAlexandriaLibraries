@@ -12,6 +12,7 @@ using Tmds.Linux;
 using static PenguinSanitizer.Extensions;
 using Microsoft.Extensions.Caching.Memory;
 using MongoDB.Bson;
+using NeoBakedVolumes.Mongo;
 
 namespace NeoVirtFS
 {
@@ -20,6 +21,7 @@ namespace NeoVirtFS
 
     public class NeoVirtFS : FuseFileSystemBase
     {
+        public IMongoDatabase db { get; }
         #region Class Persistence
         IMongoCollection<NeoAssets.Mongo.NeoVirtFS> NeoVirtFSCol;
         IMongoCollection<NeoAssets.Mongo.NeoVirtFS> NeoVirtFSDeletedCol;
@@ -27,6 +29,9 @@ namespace NeoVirtFS
         IMongoCollection<NeoVirtFSVolumes> NeoVirtFSVolumesCol;
         IMongoCollection<NeoVirtFSSecPrincipals> NeoVirtFSSecPrincipalsCol;
         IMongoCollection<NeoVirtFSSecACL> NeoVirtFSSecACLsCol;
+
+        IMongoCollection<NeoBakedVolumes.Mongo.BakedAssets> bac;
+        IMongoCollection<NeoBakedVolumes.Mongo.BakedVolumes> bvol;
 
         Dictionary<string, NeoVirtFSNamespaces> NamespaceNames = new Dictionary<string, NeoVirtFSNamespaces>();
         Dictionary<ObjectId, NeoVirtFSNamespaces> Namespaces = new Dictionary<ObjectId, NeoVirtFSNamespaces>();
@@ -45,6 +50,7 @@ namespace NeoVirtFS
         #region Constructor
         public NeoVirtFS(IMongoDatabase db)
         {
+            this.db = db;
             // Get wired up to our collections
             NeoVirtFSCol = db.NeoVirtFS();
             NeoVirtFSDeletedCol = db.NeoVirtFSDeleted();
@@ -53,89 +59,28 @@ namespace NeoVirtFS
             NeoVirtFSSecPrincipalsCol = db.NeoVirtFSSecPrincipals();
             NeoVirtFSSecACLsCol = db.NeoVirtFSSecACLs();
 
+            bac = db.BakedAssets();
+            bvol = db.BakedVolumes();
+
             if (nodeCache == null)      // Some other instance might have done this
             {
-                var oa = new MemoryCacheOptions() { 
+                var oa = new MemoryCacheOptions()
+                {
                     // SizeLimit = 100 * 1024 * 1024 
                 };  // 100 mb?
                 nodeCache = new MemoryCache(oa);
             }
-            
-            bool HaveRoot = false;
 
-            // Prepare for bulk update
-
-            var updates = new List<WriteModel<NeoAssets.Mongo.NeoVirtFS>>();
-
-            // Load up the namespaces -- there just shouldn't be too many of these
-
-            var names = NeoVirtFSNamespacesCol.FindSync(Builders<NeoVirtFSNamespaces>.Filter.Empty).ToList();
-            foreach (var n in names)
-            {
-                NamespaceNames[n.NameSpace] = n;
-                Namespaces[n._id] = n;
-
-                if (verbosity > 0)
-                    Console.WriteLine($"Namespace: {n.NameSpace}");
-
-                if (n.Root)
-                {
-                    RootNameSpace = n;
-                    HaveRoot = true;
-                    n.ParentId = ObjectId.Empty;  // Until I figure out how to set this
-                }
-
-                // Ensure that the filesystem nodes exist at the top level
-
-                FilterDefinition<NeoAssets.Mongo.NeoVirtFS> filter = Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x._id, n._id);
-
-                var upd = new UpdateDefinitionBuilder<NeoAssets.Mongo.NeoVirtFS>()
-                    .Set("_id", n._id)
-                    .SetOnInsert("Content", NeoVirtFSContent.Dir())
-                    .SetOnInsert("Stat", NeoVirtFSStat.DirDefault())
-                    .Set("NameSpace", n._id)
-                    .Set("ParentId", n.ParentId) // Set's see what root does
-                    .Set("Name", Encoding.UTF8.GetBytes(n.NameSpace))
-                    .Set("MaintLevel", true);
-
-                UpdateOneModel<NeoAssets.Mongo.NeoVirtFS> update = new UpdateOneModel<NeoAssets.Mongo.NeoVirtFS>(filter, upd) { IsUpsert = true };
-                updates.Add(update);
-            }
-
-
-
-            // Now do volumes
-
-            var volumes = NeoVirtFSVolumesCol.FindSync(Builders<NeoVirtFSVolumes>.Filter.Empty).ToList();
-            foreach (var v in volumes)
-            {
-                if (verbosity > 0)
-                    Console.WriteLine($"Volume: {v.Name}");
-
-                // Ensure that the filesystem nodes exist at the top level
-
-                FilterDefinition<NeoAssets.Mongo.NeoVirtFS> filter = Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x._id, v._id);
-
-                var upd = new UpdateDefinitionBuilder<NeoAssets.Mongo.NeoVirtFS>()
-                    .Set("_id", v._id)
-                    .SetOnInsert("Content", NeoVirtFSContent.Dir())
-                    .SetOnInsert("Stat", NeoVirtFSStat.DirDefault())
-                    .Set("NameSpace", v.NameSpace)
-                    .Set("ParentId", Namespaces[v.NameSpace]._id) // Set's see what root does
-                    .Set("Name", Encoding.UTF8.GetBytes(v.Name))
-                    .Set("MaintLevel", false);    // This is the volume level - users can do stuff here (by their policy)
-
-                UpdateOneModel<NeoAssets.Mongo.NeoVirtFS> update = new UpdateOneModel<NeoAssets.Mongo.NeoVirtFS>(filter, upd) { IsUpsert = true };
-                updates.Add(update);
-            }
-
-            // Persist
-
-            NeoVirtFSCol.BulkWrite(updates);
+            var HaveRoot = NeoAssets.Mongo.NeoVirtFS.PullNamespacesAndVolumes(db,
+                ref NamespaceNames,
+                ref Namespaces,
+                ref RootNameSpace);
 
             if (!HaveRoot)
                 throw new Exception("Did not define a root namespace");
         }
+
+     
         #endregion
 
 
@@ -600,7 +545,7 @@ namespace NeoVirtFS
 
             Console.WriteLine($"File Created: {newRec.Name.GetString()} id={newRec._id}");
 
-            fi.fh = storeHandler(FileDescriptor.FileHandlerFactory(newRec));
+            fi.fh = storeHandler(FileDescriptor.FileHandlerFactory(newRec, db, bac, bvol));
 
             var fds = DescriptorStore[fi.fh];
             return fds.Handler.Create(fds, mode, fi.flags);
@@ -644,7 +589,7 @@ namespace NeoVirtFS
                 fi.flags |= LibC.O_CREAT;  // Otherwise it won't create the file again
             }
         
-            fi.fh = storeHandler(FileDescriptor.FileHandlerFactory(fileRec));
+            fi.fh = storeHandler(FileDescriptor.FileHandlerFactory(fileRec, db, bac, bvol));
 
             var fds = DescriptorStore[fi.fh];
             return fds.Handler.Open(fds, fi.flags);

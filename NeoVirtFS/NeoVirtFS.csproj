@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NeoAssets\NeoAssets.csproj" />
+    <ProjectReference Include="..\NeoBakedVolumes\NeoBakedVolumes.csproj" />
     <ProjectReference Include="..\PenguinSanitizer\PenguinSanitizer.csproj" />
     <ProjectReference Include="..\Tmds.Fuse-master\src\Tmds.Fuse\Tmds.Fuse.csproj" />
   </ItemGroup>
