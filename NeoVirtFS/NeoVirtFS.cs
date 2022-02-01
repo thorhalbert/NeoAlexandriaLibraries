@@ -25,13 +25,13 @@ namespace NeoVirtFS
         #region Class Persistence
         IMongoCollection<NeoAssets.Mongo.NeoVirtFS> NeoVirtFSCol;
         IMongoCollection<NeoAssets.Mongo.NeoVirtFS> NeoVirtFSDeletedCol;
-        IMongoCollection<NeoVirtFSNamespaces> NeoVirtFSNamespacesCol;
-        IMongoCollection<NeoVirtFSVolumes> NeoVirtFSVolumesCol;
-        IMongoCollection<NeoVirtFSSecPrincipals> NeoVirtFSSecPrincipalsCol;
-        IMongoCollection<NeoVirtFSSecACL> NeoVirtFSSecACLsCol;
+        //IMongoCollection<NeoVirtFSNamespaces> NeoVirtFSNamespacesCol;
+        //IMongoCollection<NeoVirtFSVolumes> NeoVirtFSVolumesCol;
+        //IMongoCollection<NeoVirtFSSecPrincipals> NeoVirtFSSecPrincipalsCol;
+        //IMongoCollection<NeoVirtFSSecACL> NeoVirtFSSecACLsCol;
 
-        IMongoCollection<NeoBakedVolumes.Mongo.BakedAssets> bac;
-        IMongoCollection<NeoBakedVolumes.Mongo.BakedVolumes> bvol;
+        IMongoCollection<BakedAssets> bac;
+        IMongoCollection<BakedVolumes> bvol;
 
         Dictionary<string, NeoVirtFSNamespaces> NamespaceNames = new Dictionary<string, NeoVirtFSNamespaces>();
         Dictionary<ObjectId, NeoVirtFSNamespaces> Namespaces = new Dictionary<ObjectId, NeoVirtFSNamespaces>();
@@ -54,10 +54,10 @@ namespace NeoVirtFS
             // Get wired up to our collections
             NeoVirtFSCol = db.NeoVirtFS();
             NeoVirtFSDeletedCol = db.NeoVirtFSDeleted();
-            NeoVirtFSNamespacesCol = db.NeoVirtFSNamespaces();
-            NeoVirtFSVolumesCol = db.NeoVirtFSVolumes();
-            NeoVirtFSSecPrincipalsCol = db.NeoVirtFSSecPrincipals();
-            NeoVirtFSSecACLsCol = db.NeoVirtFSSecACLs();
+            //NeoVirtFSNamespacesCol = db.NeoVirtFSNamespaces();
+            //NeoVirtFSVolumesCol = db.NeoVirtFSVolumes();
+            //NeoVirtFSSecPrincipalsCol = db.NeoVirtFSSecPrincipals();
+            //NeoVirtFSSecACLsCol = db.NeoVirtFSSecACLs();
 
             bac = db.BakedAssets();
             bvol = db.BakedVolumes();
@@ -79,10 +79,8 @@ namespace NeoVirtFS
             if (!HaveRoot)
                 throw new Exception("Did not define a root namespace");
         }
-
-     
+    
         #endregion
-
 
         #region Fuse Methods
         public unsafe override int GetAttr(ReadOnlySpan<byte> path, ref stat stat, FuseFileInfoRef fiRef)
@@ -237,7 +235,7 @@ namespace NeoVirtFS
                 Content = NeoVirtFSContent.Dir(),
                 Stat = NeoVirtFSStat.DirDefault((uint) mode),
                 Name = cNode.Item1,
-                NameSpace = createIn.NameSpace,
+                VolumeId = createIn.VolumeId,
                 ParentId = createIn._id,
                 MaintLevel = false,
             };  // It will assign it's own objectId _id

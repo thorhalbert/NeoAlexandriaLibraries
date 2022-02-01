@@ -16,6 +16,13 @@ namespace NeoRepositories.Mongo
     }
     public class NARPs
     {
+        public static NARPs GetNARP(IMongoDatabase db, string narp)
+        {
+            var nd = db.GetCollection<NARPs>("NARPs");
+
+            return nd.FindSync(Builders<NARPs>.Filter.Eq("_id", narp)).FirstOrDefault();
+        }
+
         public string _id { get; set; }
         [BsonIgnoreIfNull] public string LastPhysical { get; set; } // 7824/7824
         [BsonIgnoreIfNull] public DateTime? LastSeen { get; set; }  // 7824/7824

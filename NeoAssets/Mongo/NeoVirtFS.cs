@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Text;
 using Tmds.Linux;
 using NeoRepositories.Mongo;
+using System.Linq;
 
 namespace NeoAssets.Mongo
 {
@@ -71,12 +72,12 @@ namespace NeoAssets.Mongo
     {
         [BsonId]
         [BsonRequired] public ObjectId _id { get; set; }
-        [BsonRequired] public ObjectId NameSpace { get; set; }
+        [BsonRequired] public ObjectId VolumeId { get; set; }   // What Volume are we in
         [BsonRequired] public ObjectId ParentId { get; set; }  // [Indexed] only rely on these (members are for repair hints)
         [BsonIgnoreIfNull] public ObjectId[] MemberIds { get; set; }  // Child nodes (of directory) - let's stick with parentId for now
 
         [BsonRequired] public byte[] Name { get; set; }         // [Indexed]
-        [BsonRequired] public int Version { get; set; } = 1;
+        [BsonIgnoreIfNull] public int Version { get; set; } = 1;
 
         [BsonRequired] public NeoVirtFSStat Stat { get; set; }
 
@@ -113,6 +114,21 @@ namespace NeoAssets.Mongo
             Stat.GetStat(ref stat, nstat);
         }
 
+        public static NeoVirtFS CreateDirectory(ObjectId parId, ObjectId volId, byte[] name, mode_t mode)
+        {
+            var newRec = new NeoVirtFS()
+            {
+                _id = ObjectId.GenerateNewId(),
+                Content = NeoVirtFSContent.Dir(),
+                Stat = NeoVirtFSStat.DirDefault((uint) mode),
+                Name = name,
+                VolumeId = volId,
+                ParentId = parId,
+                MaintLevel = false,
+            };
+
+            return newRec;
+        }
         public static NeoVirtFS CreateNewFile(NeoVirtFS par, byte[] name, ReadOnlySpan<byte> path, mode_t mode)
         {
             var id = ObjectId.GenerateNewId();
@@ -122,7 +138,7 @@ namespace NeoAssets.Mongo
             {
                 _id = id, 
                 Name = name,
-                NameSpace = par.NameSpace,
+                VolumeId = par.VolumeId,
                 ParentId = par._id,
                 Stat = NeoVirtFSStat.FileDefault((uint) mode),
                 Content = NeoVirtFSContent.NewCache(path, id),
@@ -152,6 +168,219 @@ namespace NeoAssets.Mongo
 
             // Load up the namespaces -- there just shouldn't be too many of these
 
+            ProcessNamespaces(db, NamespaceNames, Namespaces, ref RootNameSpace, ref HaveRoot, updates);
+            if (!HaveRoot)
+                throw new ApplicationException("Volume Namespaces don't define a Root - Setup Issue");
+
+            // Now do volumes
+
+            var volumes = NeoVirtFSVolumesCol.FindSync(Builders<NeoVirtFSVolumes>.Filter.Empty).ToList();
+            foreach (var v in volumes)
+            {
+                Console.WriteLine($"Volume: {v.Name}");
+
+                // Ensure that the filesystem nodes exist at the top level
+
+                FilterDefinition<NeoVirtFS> filter = Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x._id, v._id);
+
+                var upd = new UpdateDefinitionBuilder<NeoAssets.Mongo.NeoVirtFS>()
+                    .Set("_id", v._id)
+                    .SetOnInsert("Content", NeoVirtFSContent.Dir())
+                    .SetOnInsert("Stat", NeoVirtFSStat.DirDefault())
+                    .Set("VolumeId", v.NameSpace)
+                    .Set("ParentId", Namespaces[v.NameSpace]._id) // Set's see what root does
+                    .Set("Name", Encoding.UTF8.GetBytes(v.Name))
+                    .Set("MaintLevel", false);    // This is the volume level - users can do stuff here (by their policy)
+
+                UpdateOneModel<NeoVirtFS> update = new UpdateOneModel<NeoAssets.Mongo.NeoVirtFS>(filter, upd) { IsUpsert = true };
+                updates.Add(update);
+            }
+
+            // Persist
+
+            NeoVirtFSCol.BulkWrite(updates);
+
+            return HaveRoot;
+        }
+
+        public static ObjectId EnsureVolumeSetUpProperly(IMongoDatabase db, string volumeNamePath)
+        {
+            var HaveRoot = false;
+
+            var NamespaceNames = new Dictionary<string, NeoVirtFSNamespaces>();
+            var Namespaces = new Dictionary<ObjectId, NeoVirtFSNamespaces>();
+            NeoVirtFSNamespaces RootNameSpace = null;
+
+            var NeoVirtFSCol = db.NeoVirtFS();
+            var NeoVirtFSDeletedCol = db.NeoVirtFSDeleted();
+            var NeoVirtFSNamespacesCol = db.NeoVirtFSNamespaces();
+            var NeoVirtFSVolumesCol = db.NeoVirtFSVolumes();
+            var NeoVirtFSSecPrincipalsCol = db.NeoVirtFSSecPrincipals();
+            var NeoVirtFSSecACLsCol = db.NeoVirtFSSecACLs();
+
+            // Prepare for bulk update
+
+            var updates = new List<WriteModel<NeoVirtFS>>();
+
+            // Load up the namespaces -- there just shouldn't be too many of these
+
+            ProcessNamespaces(db, NamespaceNames, Namespaces, ref RootNameSpace, ref HaveRoot, updates);
+            if (!HaveRoot)
+                throw new ApplicationException("Volume Namespaces don't define a Root - Setup Issue");
+
+            // Now do volumes 
+
+            var (parentPath, VolumeName) = FindVolumeNameWithPath(volumeNamePath, Namespaces, RootNameSpace);
+            if (parentPath == null)  // We won't really get here - the above will throw
+                throw new ArgumentException($"Volume Path Not Valid: {volumeNamePath}");
+
+            // So we actually need to create this volume into NeoVirtFSVolumes, which unfortunately needs business logic
+            // We need some sort of policy for this.  Maybe we're overthinking.  Maybe we just need to be passed the path so we
+            //  don't need to decide?   We have the Namespaces above so we can decode
+
+            var volume = NeoVirtFSVolumesCol.FindSync(Builders<NeoVirtFSVolumes>.Filter.Eq(x => x.Name, VolumeName)).FirstOrDefault();
+            if (volume == null)
+            {
+                Console.WriteLine($"[Create Volume {VolumeName} into Namespace {parentPath.NameSpace}]");
+
+                var newNode = ObjectId.GenerateNewId();
+
+                // If the namespace moved then this isn't going to change it, though we may assert below
+
+                NeoVirtFSVolumesCol.InsertOne(new NeoVirtFSVolumes()
+                {
+                    _id = newNode,
+                    Name = VolumeName,
+                    NameSpace = parentPath._id,
+                    NodeId = newNode,  // These are intentionally the same
+                    VolumeDefaultACL = null,
+                    ImportLocked = false,
+                    VolumeLocked = false,
+                });
+            }
+
+            // This is only going to return our one volume (which we may have just created)
+            var volFilter = Builders<NeoVirtFSVolumes>.Filter.Eq(x => x.Name, VolumeName);
+            var v = NeoVirtFSVolumesCol.FindSync(volFilter).FirstOrDefault();
+
+            // This is making sure that the NeoVirtFS elements match the Volume setup (they use the same keys for clarity)
+
+            Console.WriteLine($"Volume: {v.Name}, NameSpace: {Namespaces[v.NameSpace].NameSpace}");
+
+            // Assert if the namespace has moved - We can just move it
+
+            if (v.NameSpace != parentPath._id)
+            {
+                Console.WriteLine($"Volume Namespace {Namespaces[v.NameSpace].NameSpace} is not same as current Namespace {Namespaces[parentPath._id].NameSpace}");
+
+                v.NameSpace = parentPath._id;   // Just move the node to the correct place within namespaces
+
+                // And do it in the table (not bulk)
+                var fixPar = new UpdateDefinitionBuilder<NeoVirtFSVolumes>()
+                    .Set("NameSpace", parentPath._id);
+
+                NeoVirtFSVolumesCol.UpdateOne(volFilter, fixPar);
+            }
+
+            // Ensure that the filesystem nodes exist at the top level
+
+            FilterDefinition<NeoVirtFS> filter = Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x._id, v._id);
+
+            var upd = new UpdateDefinitionBuilder<NeoAssets.Mongo.NeoVirtFS>()
+                .Set("_id", v._id)
+                .SetOnInsert("Content", NeoVirtFSContent.Dir())
+                .SetOnInsert("Stat", NeoVirtFSStat.DirDefault())
+                .Set("VolumeId", v.NameSpace)
+                .Set("ParentId", Namespaces[v.NameSpace]._id) // Set's see what root does - this will also move the Node to match the Volume
+                .Set("Name", Encoding.UTF8.GetBytes(v.Name))
+                .Set("MaintLevel", false);    // This is the volume level - users can do stuff here (by their policy)
+
+            UpdateOneModel<NeoVirtFS> update = new UpdateOneModel<NeoAssets.Mongo.NeoVirtFS>(filter, upd) { IsUpsert = true };
+            updates.Add(update);
+
+            // Persist
+
+            NeoVirtFSCol.BulkWrite(updates);
+
+            return v._id;
+        }
+
+        /// <summary>
+        /// Walk the path through the namespaces and see if this is a valid path.  Really we're finding
+        /// the parent for the volume.  Someday this needs to be more dynamic in case we move the volume's rooting.
+        /// </summary>
+        /// <param name="volumeNamePath"></param>
+        /// <param name="namespaces"></param>
+        /// <param name="rootNameSpace"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
+        private static (NeoVirtFSNamespaces parentPath, string volumeName) FindVolumeNameWithPath(string volumeNamePath, 
+            Dictionary<ObjectId, NeoVirtFSNamespaces> namespaces,
+            NeoVirtFSNamespaces rootNameSpace)
+        {
+            NeoVirtFSNamespaces retParent = null;
+
+            // Build a quick index to traverse namespaces in a tree by name - ultimately we need to cache this
+
+            var nameTree = new Dictionary<ObjectId, Dictionary<string, ObjectId>>();
+
+            Console.WriteLine("Build Tree Index");
+            foreach (var n in namespaces)
+            {
+                var p = n.Value.ParentId;
+
+                if (nameTree.ContainsKey(p))
+                    nameTree[p].Add(n.Value.NameSpace, n.Key);
+                else { 
+                    var newT = new Dictionary<string, ObjectId>();
+                    newT.Add(n.Value.NameSpace, n.Key);
+                    nameTree.Add(n.Value.ParentId, newT);
+                };         
+            }
+
+            var paths = volumeNamePath.Split('/');
+
+            // Start at the top 
+
+            var rootLevel = rootNameSpace._id;
+            var levelMembers = nameTree[rootLevel];
+
+            //var levelStack = new List<NeoVirtFSNamespaces>();
+
+            // Have top stop one before the end
+            foreach (var p in paths[..^1])
+            {
+                if (levelMembers==null)
+                    throw new ArgumentException($"Path Element {p} has no children");
+
+                if (!levelMembers.ContainsKey(p))
+                    throw new ArgumentException($"Path Element {p} is not found in namespaces: {volumeNamePath}");
+
+                var mem = levelMembers[p];
+                var level = namespaces[mem];
+                //levelStack.Add(level);
+
+                if (nameTree.ContainsKey(level._id))
+                    levelMembers = nameTree[level._id];
+                else
+                    levelMembers = null;
+
+                retParent = level;
+            }
+
+            // And return our tuple
+
+            return (retParent, paths.Last());
+        }
+
+        private static void ProcessNamespaces(IMongoDatabase db, 
+            Dictionary<string, NeoVirtFSNamespaces> NamespaceNames, 
+            Dictionary<ObjectId, NeoVirtFSNamespaces> Namespaces, 
+            ref NeoVirtFSNamespaces RootNameSpace,
+            ref bool HaveRoot,
+            List<WriteModel<NeoVirtFS>> updates)
+        {
+            var NeoVirtFSNamespacesCol = db.NeoVirtFSNamespaces();
             var names = NeoVirtFSNamespacesCol.FindSync(Builders<NeoVirtFSNamespaces>.Filter.Empty).ToList();
             foreach (var n in names)
             {
@@ -169,51 +398,20 @@ namespace NeoAssets.Mongo
 
                 // Ensure that the filesystem nodes exist at the top level
 
-                FilterDefinition<NeoAssets.Mongo.NeoVirtFS> filter = Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x._id, n._id);
+                FilterDefinition<NeoVirtFS> filter = Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x._id, n._id);
 
                 var upd = new UpdateDefinitionBuilder<NeoAssets.Mongo.NeoVirtFS>()
                     .Set("_id", n._id)
                     .SetOnInsert("Content", NeoVirtFSContent.Dir())
                     .SetOnInsert("Stat", NeoVirtFSStat.DirDefault())
-                    .Set("NameSpace", n._id)
+                    .Set("VolumeId", n._id)
                     .Set("ParentId", n.ParentId) // Set's see what root does
                     .Set("Name", Encoding.UTF8.GetBytes(n.NameSpace))
                     .Set("MaintLevel", true);
 
-                UpdateOneModel<NeoAssets.Mongo.NeoVirtFS> update = new UpdateOneModel<NeoAssets.Mongo.NeoVirtFS>(filter, upd) { IsUpsert = true };
+                UpdateOneModel<NeoVirtFS> update = new UpdateOneModel<NeoAssets.Mongo.NeoVirtFS>(filter, upd) { IsUpsert = true };
                 updates.Add(update);
             }
-
-            // Now do volumes
-
-            var volumes = NeoVirtFSVolumesCol.FindSync(Builders<NeoVirtFSVolumes>.Filter.Empty).ToList();
-            foreach (var v in volumes)
-            {
-
-                Console.WriteLine($"Volume: {v.Name}");
-
-                // Ensure that the filesystem nodes exist at the top level
-
-                FilterDefinition<NeoAssets.Mongo.NeoVirtFS> filter = Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x._id, v._id);
-
-                var upd = new UpdateDefinitionBuilder<NeoAssets.Mongo.NeoVirtFS>()
-                    .Set("_id", v._id)
-                    .SetOnInsert("Content", NeoVirtFSContent.Dir())
-                    .SetOnInsert("Stat", NeoVirtFSStat.DirDefault())
-                    .Set("NameSpace", v.NameSpace)
-                    .Set("ParentId", Namespaces[v.NameSpace]._id) // Set's see what root does
-                    .Set("Name", Encoding.UTF8.GetBytes(v.Name))
-                    .Set("MaintLevel", false);    // This is the volume level - users can do stuff here (by their policy)
-
-                UpdateOneModel<NeoAssets.Mongo.NeoVirtFS> update = new UpdateOneModel<NeoAssets.Mongo.NeoVirtFS>(filter, upd) { IsUpsert = true };
-                updates.Add(update);
-            }
-
-            // Persist
-
-            NeoVirtFSCol.BulkWrite(updates);
-
-            return HaveRoot;
         }
 
         public byte[] GetStatPhysical()
@@ -243,7 +441,7 @@ namespace NeoAssets.Mongo
             ret._id = ObjectId.GenerateNewId();
 
             // Reparent
-            ret.NameSpace = par.NameSpace;
+            ret.VolumeId = par.VolumeId;
             ret.ParentId = par._id;
 
             // New name
@@ -259,7 +457,7 @@ namespace NeoAssets.Mongo
             // Return fixed attributes
             ret.Add(Encoding.ASCII.GetBytes("_id"));
             ret.Add(Encoding.ASCII.GetBytes("Version"));
-            ret.Add(Encoding.ASCII.GetBytes("NameSpace"));
+            ret.Add(Encoding.ASCII.GetBytes("VersionId"));
 
             // Return content based attributes
             Content.GetAttributeList(ret);
@@ -281,7 +479,7 @@ namespace NeoAssets.Mongo
 
             // Pull in parent stuff
 
-            NameSpace = par.NameSpace;
+            VolumeId = par.VolumeId;
             ParentId = par._id;
 
         }
@@ -554,6 +752,18 @@ namespace NeoAssets.Mongo
         [BsonRequired] public string Name { get; set; }         // Name of Volume
         [BsonRequired] public ObjectId NodeId { get; set; }    // Pointer to NeoVirtFS Directory Node
         [BsonIgnoreIfNull] public ObjectId? VolumeDefaultACL { get; set; }
+        [BsonIgnoreIfNull] public bool VolumeLocked { get; set; }
+        [BsonIgnoreIfNull] public bool ImportLocked { get; set; }
+
+        public static void EnsureNarpVolumeExists(IMongoDatabase db, string narp)
+        {
+            // Make sure this is really a narp
+            var nRec = NARPs.GetNARP(db, narp);
+            if (nRec == null)
+                throw new ArgumentException($"NARP {narp} doesn't exist");
+
+            Console.WriteLine($"[NARP {narp} Exists]");
+        }
     }
 
     public enum NeoVirtFSSecPrincipalTypes
