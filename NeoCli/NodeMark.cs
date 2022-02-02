@@ -38,13 +38,13 @@ public partial class Program
             this.level = level;
 
             Name = m.Name.ToArray();
-            this.rootOfVolume = rootOfVolume; 
+            this.rootOfVolume = rootOfVolume;
 
             var v = new NeoVirtFS
             {
                 Name = Name
             };
-             
+
             if (stack == null)
             {
                 v.NARPImport = v.Name.GetString();
@@ -92,25 +92,6 @@ public partial class Program
                 {
                     var sha1 = link.Substring(AssetTag.Length);
 
-                    v.Content = new NeoVirtFSContent
-                    {
-                        ContentType = VirtFSContentTypes.Asset,
-                        AssetSHA1 = Convert.FromHexString(sha1),
-                    };
-
-                    // Now, we should have the stat somewhere
-                    // And we should check to see if this is really annealed or if we've
-                    // lost it.  If this is a mirror we stand a chance of getting it back
-                    // Kind of a judgement call to just lose the file, or get an EIO error accessing it
-                    // At least for mirrors we should just lose it
-
-                 
-
-                    // This gets us to our parent, if we need it
-
-                    //var parentPath = realPath.ToArray();
-                    //var paruuid = GuidUtility.Create(GuidUtility.UrlNamespace, parentPath.ToArray());
-
                     realPath.Add((byte) '/');
                     realPath.AddRange(m.Name.ToArray());
 
@@ -152,11 +133,35 @@ public partial class Program
                     }
 
                     // If we get to here, we have an annealed asset type, so we need to process
-
                     Broken = false;
+
+                    var parentId = EvalFullPath(level, stack, rootOfVolume);
+
+                    var getFilter = Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x.ParentId, parentId) &
+                     Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x.Name, m.Name);
+
+                    var node = NeoVirtFSCol.FindSync(getFilter).FirstOrDefault();
+                    if (node != null)
+                    {
+                        // Node already exists, need to update it 
+                        nodeId = node._id;
+
+                        // Skip for now
+                        return;
+                    }
+
+                    v = NeoVirtFS.CreateNewFile(parentId,
+                        rootOfVolume,
+                        m.Name.ToArray(), 
+                        null, 
+                        v.Stat.st_mode.GetMode(),
+                        NeoVirtFSContent.AnnealedAsset(Convert.FromHexString(sha1)));
+
+                    Console.WriteLine($"Create Asset: {Encoding.UTF8.GetString(realPath.ToArray())} / {Encoding.UTF8.GetString(m.Name.ToArray())} Level={level}  Parent={parentId} Id={v._id} SHA1={sha1}");
+
+                    NeoVirtFSCol.InsertOne(v);
+
                     return;
-                  
-                    //Console.WriteLine($"Asset: {Encoding.UTF8.GetString(realPath.ToArray())} Level={level} Asset={sha1}");
                 }
                 else
                 {
@@ -165,58 +170,12 @@ public partial class Program
                     Console.WriteLine($"Unknown link {link}");
                     return;
                 }
-
-
-
-
             }
-            else if (m.IsDir) {
-                var parentId = rootOfVolume;
-                var parentName = "(root-volume)";
+            else if (m.IsDir)
+            {
+                var parentId = EvalFullPath(level, stack, rootOfVolume);
 
-                if (level > 0)
-                {
-                    var last = stack[level - 1];        // This is wrong
-                    parentId = last.nodeId;
-                    parentName = Encoding.UTF8.GetString(last.Name);
-
-                    // Now just compute this from scratch and we can fix the above
-
-                    StringBuilder sb = null;
-                    foreach (var s in stack.Skip(1))
-                    {
-                        if (sb != null)
-                            sb.Append(" / ");
-                        else
-                            sb = new StringBuilder();
-
-                        sb.Append(Encoding.UTF8.GetString(s.Name));
-                    }
-
-                    if (sb != null)
-                        Console.WriteLine($"Stack Path: {sb.ToString()}");
-
-                    var curPar = rootOfVolume;
-
-                    foreach (var s in stack.Skip(1))
-                    {
-                        var nodeF = Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x.ParentId, curPar) &
-                            Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x.Name, s.Name);
-
-                        var pRec = NeoVirtFSCol.FindSync(nodeF).FirstOrDefault();
-                        if (pRec == null)
-                            throw new Exception($"Can't find element {curPar} {Encoding.UTF8.GetString(s.Name)}");
-                        curPar = s.nodeId;
-                    }
-
-                    if (curPar != parentId)
-                    {
-                        Console.WriteLine($"Recompute fails to match {curPar} != {parentId}");
-                        parentId = curPar;
-                    }
-                }
-
-                Console.WriteLine($"Parent: {parentName} {parentId}");
+                //Console.WriteLine($"Parent: {parentName} {parentId}");
 
                 var getFilter = Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x.ParentId, parentId) &
                       Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x.Name, m.Name);
@@ -230,6 +189,9 @@ public partial class Program
                     if (node._id == parentId)
                         throw new ApplicationException($"Looping directories: {Encoding.UTF8.GetString(realPath.ToArray())}");
 
+
+                    throw new ApplicationException($"Directory duplicated: {Encoding.UTF8.GetString(realPath.ToArray())} {Encoding.UTF8.GetString(m.Name.ToArray())}");
+
                     // Skip for now
                     return;
                 }
@@ -240,15 +202,70 @@ public partial class Program
                 if (v._id == parentId)
                     throw new ApplicationException($"Looping directories 2: {Encoding.UTF8.GetString(realPath.ToArray())}");
 
-                Console.WriteLine($"Create Directory: {Encoding.UTF8.GetString(realPath.ToArray())}/{Encoding.UTF8.GetString(m.Name.ToArray())} Level={level} Id={nodeId}");
+                Console.WriteLine($"Create Directory: {Encoding.UTF8.GetString(realPath.ToArray())} / {Encoding.UTF8.GetString(m.Name.ToArray())} Level={level}  Parent={parentId} Id={nodeId}");
 
                 NeoVirtFSCol.InsertOne(v);
 
                 Broken = false;
                 return;
             }
+            else if (m.IsFile)
+            {
+                Console.WriteLine($"Encountered File: {Encoding.UTF8.GetString(realPath.ToArray())} / {Encoding.UTF8.GetString(m.Name.ToArray())}");
+            }
+            else
+            {
+                Console.WriteLine($"Unknown File: {Encoding.UTF8.GetString(realPath.ToArray())} / {Encoding.UTF8.GetString(m.Name.ToArray())}");
+            }
 
 
+
+        }
+
+        private ObjectId EvalFullPath(int level, NodeMark[] stack, ObjectId rootOfVolume)
+        {
+            var parentId = rootOfVolume;
+            var parentName = "(root-volume)";
+
+            if (level > 0)
+            {
+                StringBuilder sb = null;
+                foreach (var s in stack.Skip(1))
+                {
+                    if (sb != null)
+                        sb.Append(" / ");
+                    else
+                        sb = new StringBuilder();
+
+                    sb.Append(Encoding.UTF8.GetString(s.Name));
+                }
+
+                if (sb != null)
+                {
+                    //Console.WriteLine($"Stack Path: {sb.ToString()}");
+                    parentName = sb.ToString();
+                }
+
+                var curPar = rootOfVolume;
+
+                foreach (var s in stack.Skip(1))
+                {
+                    // These could be cached - it would speed things up quite a bit
+
+                    var nodeF = Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x.ParentId, curPar) &
+                        Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x.Name, s.Name);
+
+                    var pRec = NeoVirtFSCol.FindSync(nodeF).FirstOrDefault();
+                    if (pRec == null)
+                        throw new Exception($"Can't find element {curPar} {Encoding.UTF8.GetString(s.Name)}");
+
+                    curPar = s.nodeId;
+                }
+
+                parentId = curPar;
+            }
+
+            return parentId;
         }
     }
 }

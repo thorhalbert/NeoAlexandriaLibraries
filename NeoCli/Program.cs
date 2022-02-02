@@ -119,14 +119,16 @@ public partial class Program
         // Cut off the volume name at the beginning
         var nodeList = string.Join(" / ", newStack.Skip(1).Select(x => x.Name.GetString()));
 
-        Console.WriteLine($"Node: {nodeList}");
+        //Console.WriteLine($"Node: {nodeList}");
 
         // Console.WriteLine($"{ind}{scan.Name.GetString()} {info(scan)}");
         foreach (var m in scan.Members)
         {
-            newStack.Add(new NodeMark(m, level, newStack.ToArray(), rootOfVolume, db));
+            var stackCopy = newStack.ToArray().ToList();
+
+            stackCopy.Add(new NodeMark(m, level, newStack.ToArray(), rootOfVolume, db));
  
-            Assimilate(m, level + 1, newStack.ToArray(), rootOfVolume);
+            Assimilate(m, level + 1, stackCopy.ToArray(), rootOfVolume);
         }
     }
 

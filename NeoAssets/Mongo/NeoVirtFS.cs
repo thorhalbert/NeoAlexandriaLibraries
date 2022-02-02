@@ -129,19 +129,22 @@ namespace NeoAssets.Mongo
 
             return newRec;
         }
-        public static NeoVirtFS CreateNewFile(NeoVirtFS par, byte[] name, ReadOnlySpan<byte> path, mode_t mode)
+        public static NeoVirtFS CreateNewFile(ObjectId parId, ObjectId volId, byte[] name, ReadOnlySpan<byte> path, mode_t mode, NeoVirtFSContent cont=null)
         {
             var id = ObjectId.GenerateNewId();
 
-            Console.WriteLine($"Set newId for file to {id}");
+            if (cont == null)
+                cont = NeoVirtFSContent.NewCache(path, id);
+
+            //Console.WriteLine($"Set newId for file to {id}");
             var newRec = new NeoVirtFS
             {
                 _id = id, 
                 Name = name,
-                VolumeId = par.VolumeId,
-                ParentId = par._id,
+                VolumeId = volId,
+                ParentId = parId,
                 Stat = NeoVirtFSStat.FileDefault((uint) mode),
-                Content = NeoVirtFSContent.NewCache(path, id),
+                Content = cont,
                 MaintLevel = false
             };
 
@@ -544,6 +547,17 @@ namespace NeoAssets.Mongo
             return ret;
         }
 
+        public static NeoVirtFSContent AnnealedAsset(byte[] AssetSHA1)
+        {
+            var ret = new NeoVirtFSContent
+            {
+                ContentType = VirtFSContentTypes.Asset,
+                NotAFile = false,
+                AssetSHA1 = AssetSHA1
+            };
+
+            return ret;
+        }
         internal static NeoVirtFSContent NewCache(ReadOnlySpan<byte> path, ObjectId nodeObj)
         {
             var fileuuid = GuidUtility.Create(GuidUtility.UrlNamespace, path.ToArray());

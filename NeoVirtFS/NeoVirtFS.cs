@@ -148,6 +148,15 @@ namespace NeoVirtFS
             if (error != 0)
                 return -LibC.ENOENT;
 
+            //var sb = new StringBuilder();
+            //foreach (var v in procs)
+            //{
+            //    sb.Append(v.Item2.Name.GetString());
+            //    sb.Append("{");
+            //    sb.Append(v.Item2._id.ToString());
+            //    sb.Append("}/");
+            //}
+
 
             var last = procs.Pop();
        
@@ -166,6 +175,11 @@ namespace NeoVirtFS
 
             // This could conceivably return millions of records - Once we figure out how to set up batches
             // we can use OpenDir to create a file handle which we can bind an enumerator to (RelaseDir can close it).
+
+
+            //Console.WriteLine($"Full: {sb}");
+            //Console.WriteLine($"Item: Path={path.GetString()} {last.Item2.Name.GetString()} Parent: {last.Item2._id}");
+
 
             // ParentId should be indexed (with a hash)
             var filter = Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x.ParentId, last.Item2._id);
@@ -267,6 +281,7 @@ namespace NeoVirtFS
 
             if (newFile.Item2 != null)
             {
+             
                 // Any children?
                 var filter = Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x.ParentId, newFile.Item2._id);
                 var rec = NeoVirtFSCol.FindSync(filter).FirstOrDefault();  // Any record which returns is a no
@@ -533,7 +548,7 @@ namespace NeoVirtFS
             if (par.MaintLevel) return -LibC.EPERM;
             
             // Create new record (new id) and insert
-            var newRec = NeoAssets.Mongo.NeoVirtFS.CreateNewFile(par, newFile.Item1, path, mode);
+            var newRec = NeoAssets.Mongo.NeoVirtFS.CreateNewFile(par._id, par.VolumeId, newFile.Item1, path, mode);
             newRec.Version = version + 1;
 
             NeoVirtFSCol.InsertOne(newRec);
@@ -842,7 +857,7 @@ namespace NeoVirtFS
         {
             var sb = new StringBuilder();
 
-            sb.Append(node._id.ToString());
+            sb.Append(node.ParentId.ToString());
             sb.Append('_');
             sb.Append(Convert.ToHexString(node.Name));
             //Console.WriteLine($"KeyN: {sb}");
@@ -873,9 +888,9 @@ namespace NeoVirtFS
             }
         }
 
-        private NeoAssets.Mongo.NeoVirtFS? NodeCacheGet(ObjectId id, byte[] name)
+        private NeoAssets.Mongo.NeoVirtFS? NodeCacheGet(ObjectId parentid, byte[] name)
         {
-            var key = NodeKey(id, name);
+            var key = NodeKey(parentid, name);
             lock (nodeCache)
             {
                 if (nodeCache.TryGetValue(key, out var resObj)){
@@ -1037,7 +1052,7 @@ namespace NeoVirtFS
                 depth++;
 
                 var prevNode = node;
-                node = NodeCacheGet(node._id, level);
+                node = NodeCacheGet(prevNode._id, level);
                 if (node == null)
                 {
 
