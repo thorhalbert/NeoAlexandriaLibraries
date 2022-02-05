@@ -42,7 +42,10 @@ namespace NeoVirtFS
         {
             try
             {
-                asset = new UnbakeForFuse(db, bac, bVol, Convert.ToHexString(file.Content.AssetSHA1));
+                var sha1 = Convert.ToHexString(file.Content.AssetSHA1).ToLowerInvariant();
+                Console.WriteLine($"Open Asset {sha1}");
+
+                asset = new UnbakeForFuse(db, bac, bVol, sha1);
                 return 0;
             }
             catch (Exception ex)
@@ -55,8 +58,30 @@ namespace NeoVirtFS
 
         public int Read(FileDescriptor fds, ulong offset, Span<byte> buffer)
         {
+            // So, if we return short, fuse thinks this in an eof
+            // So we must keep packing
+
             if (asset == null) return -LibC.EBADF;
-            return asset.Read(offset, buffer);
+
+            //Console.WriteLine($"READ: Off={offset} Len={buffer.Length}");
+
+            var count = 0;
+         
+            while (count < buffer.Length)
+            {             
+                var left = buffer.Length - count;
+
+                var newCount = asset.Read(offset, buffer.Slice(count, left));
+             
+                offset += (ulong) newCount;
+                count += newCount;
+
+                //Console.WriteLine($"Count={count} Last Return {newCount}");
+
+                if (newCount < 1) return count;  // EOF 
+            }
+
+            return count;
         }
 
         public int Release(FileDescriptor fds)

@@ -67,6 +67,7 @@ namespace NeoAssets.Mongo
         CREATE = 3,
         RENAMEOVER = 4,
         RMDIR = 5,
+        LOST=99,
     }
     public class NeoVirtFS
     {
@@ -521,6 +522,7 @@ namespace NeoAssets.Mongo
 
         // Asset = 20
         [BsonIgnoreIfNull] public byte[] AssetSHA1 { get; set; }        // File is annealed - hardlink to virtual asset - if > 0 bytes
+        [BsonIgnoreIfNull] public bool AssetLost { get; set; }          // Asset volume was lost (disk failure) - this is so data can be ressurected
 
         // MountedVolume = 30
         [BsonIgnoreIfNull] public ObjectId? MountedVolume { get; set; }  // Link (like symbolic link) go other volume
@@ -547,17 +549,31 @@ namespace NeoAssets.Mongo
             return ret;
         }
 
-        public static NeoVirtFSContent AnnealedAsset(byte[] AssetSHA1)
+        public static NeoVirtFSContent AnnealedAsset(byte[] AssetSHA1, bool lost)
         {
             var ret = new NeoVirtFSContent
             {
                 ContentType = VirtFSContentTypes.Asset,
                 NotAFile = false,
-                AssetSHA1 = AssetSHA1
+                AssetSHA1 = AssetSHA1,
+                AssetLost = lost
             };
 
             return ret;
         }
+
+        public static NeoVirtFSContent PhysicalFilePath(byte[] filePath)
+        {
+            var ret = new NeoVirtFSContent
+            {
+                ContentType = VirtFSContentTypes.PhysicalFile,
+                NotAFile = false,
+                PhysicalFile = filePath
+            };
+
+            return ret;
+        }
+
         internal static NeoVirtFSContent NewCache(ReadOnlySpan<byte> path, ObjectId nodeObj)
         {
             var fileuuid = GuidUtility.Create(GuidUtility.UrlNamespace, path.ToArray());
@@ -639,9 +655,9 @@ namespace NeoAssets.Mongo
 
             st_mode = (NeoMode_T) Convert.ToUInt32(stat.mode);
 
-            st_ctim = DateTimeOffset.FromUnixTimeMilliseconds(stat.ctime);
-            st_mtim = DateTimeOffset.FromUnixTimeMilliseconds(stat.mtime);
-            st_atim = DateTimeOffset.FromUnixTimeMilliseconds(stat.atime);
+            st_ctim = DateTimeOffset.FromUnixTimeMilliseconds(stat.ctime*1000);
+            st_mtim = DateTimeOffset.FromUnixTimeMilliseconds(stat.mtime*1000);
+            st_atim = DateTimeOffset.FromUnixTimeMilliseconds(stat.atime*1000);
 
             st_dtim = DateTimeOffset.MinValue;
         }
@@ -730,7 +746,7 @@ namespace NeoAssets.Mongo
             stat.st_mtim = st_mtim.GetTimeSpec();
         }
 
-        internal static NeoVirtFSStat FileDefault(uint mode = 0b110_100_100)
+        public static NeoVirtFSStat FileDefault(uint mode = 0b110_100_100)
         {
             var stt = DateTimeOffset.UtcNow;
 

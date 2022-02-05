@@ -117,6 +117,8 @@ namespace NeoVirtFS
                     // Not trying to keep this syned in the database yet
                     last.Item2.GetStat(ref stat, nstat);
                 }
+                //Console.WriteLine($"Length Stat={stat.st_size}");
+
                 return 0;
             }
             catch (Exception ex)
@@ -595,7 +597,7 @@ namespace NeoVirtFS
                 Console.WriteLine($"File Deleted: {newFile.Item2.Name.GetString()} id={newFile.Item2._id}  Version={newFile.Item2.Version}");
                 fileDelete(newFile.Item2, DeleteTypes.TRUNC);
 
-                fileRec = NeoAssets.Mongo.NeoVirtFS.CreateNewFile(par, newFile.Item1, path, (mode_t) (uint) oldFile.Stat.st_mode);
+                fileRec = NeoAssets.Mongo.NeoVirtFS.CreateNewFile(par._id, par.VolumeId, newFile.Item1, path, (mode_t) (uint) oldFile.Stat.st_mode);
                 fileRec.Version = oldFile.Version + 1;
                 NeoVirtFSCol.InsertOne(fileRec);
 
@@ -786,7 +788,7 @@ namespace NeoVirtFS
         public override int GetXAttr(ReadOnlySpan<byte> path, ReadOnlySpan<byte> name, Span<byte> data)
         {
             if (verbosity > 0)
-                Console.WriteLine($"GetXAttr {path.GetString()}");
+                Console.WriteLine($"GetXAttr {path.GetString()} Attr: {name.GetString()}");
 
             int error = 0, level = 0;
             var procs = ProcPath(path, ref error, ref level);
@@ -828,7 +830,7 @@ namespace NeoVirtFS
         public override int UpdateTimestamps(ReadOnlySpan<byte> path, ref timespec atime, ref timespec mtime, FuseFileInfoRef fiRef)
         {
             if (verbosity > 0)
-                Console.WriteLine($"UpdateTimestamps {path.GetString()} atime={atime.ToDTO()} mtime={atime.ToDTO()}");
+                Console.WriteLine($"UpdateTimestamps {path.GetString()} atime={atime.ToDTO()} mtime={mtime.ToDTO()}");
 
             int error = 0, level = 0;
             var procs = ProcPath(path, ref error, ref level);
@@ -940,7 +942,7 @@ namespace NeoVirtFS
             {
                 DescriptorFree[fd] = true;
                 DescriptorStore.Remove(fd);
-                Console.WriteLine($"[Destroy Handler {fd} Free={DescriptorFree.Count} Existing={DescriptorStore.Count}]");
+                //Console.WriteLine($"[Destroy Handler {fd} Free={DescriptorFree.Count} Existing={DescriptorStore.Count}]");
             }
         }
 
@@ -957,7 +959,7 @@ namespace NeoVirtFS
                     DescriptorStore[fd] = fds;
                     fds.fd = fd;
 
-                    Console.WriteLine($"[Recycle Handler {fd} max={FileDescriptorMax} Free={DescriptorFree.Count} Existing={DescriptorStore.Count}]");
+                    //Console.WriteLine($"[Recycle Handler {fd} max={FileDescriptorMax} Free={DescriptorFree.Count} Existing={DescriptorStore.Count}]");
 
                     return fd;
                 }
@@ -966,7 +968,7 @@ namespace NeoVirtFS
                 DescriptorStore[fd] = fds;
                 fds.fd = fd;
 
-                Console.WriteLine($"[New Handler {fd} max={FileDescriptorMax} Free={DescriptorFree.Count} Existing={DescriptorStore.Count}]");
+                //Console.WriteLine($"[New Handler {fd} max={FileDescriptorMax} Free={DescriptorFree.Count} Existing={DescriptorStore.Count}]");
                 return fd;
             }
         }

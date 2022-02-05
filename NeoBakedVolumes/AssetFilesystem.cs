@@ -38,7 +38,7 @@ namespace NeoBakedVolumes
 
         public IFileInfo GetFileInfo(string subpath)
         {
-
+           
             return new AssetFileSystem.File(subpath, db, bac);
 
 
@@ -91,19 +91,23 @@ namespace AssetFileSystem
         {
             this.db = db;
             this.bac = bac;
-            this.subpath = subpath;
+            this.subpath = subpath.ToLowerInvariant();   // These come in upper case occasionally
 
             // We may want to enforce a file heirarchy here, but for not just need an
             // asset record to match (key is simply the sha1 in lower case and text)
 
-            var theFilter = Builders<BakedAssets>.Filter.Eq("_id", subpath);
+            var theFilter = Builders<BakedAssets>.Filter.Eq("_id", this.subpath);
             baRec = bac.FindSync(theFilter).FirstOrDefault();
 
             // This file could conceivably exist as an unanneled file but we would
             // need a different abstraction here to read it -- we can generate a different
             // Stream, but we will need a different file service
             // Also this scheme needs access controls
-            if (baRec == null) return;
+            if (baRec == null)
+            {
+                Console.WriteLine($"Can't file BakedAsset: _id: {this.subpath}");
+                return;
+            }
 
             var vCol = bVol;
             if (vCol == null)
@@ -120,6 +124,7 @@ namespace AssetFileSystem
             }
 
             unBaker = new UnbakeContext(db, volRec, baRec);
+
 
 
             //var channel = GrpcChannel.ForAddress("http://feanor:5000");
@@ -556,13 +561,14 @@ namespace AssetFileSystem
         {
 
             public bool Debug { get; set; } = false;
+            public bool DoSum { get; set; } = false;
 
             IMongoDatabase db;
             public IMongoCollection<BakedAssets> bakedAssets { get; set; }
 
             private string assetId;
-            //private SHA1 sha1Computer;
-            //private SHA1 sha1Computer2;
+            private SHA1 sha1Computer;
+            private SHA1 sha1Computer2;
             private File file;
             private ulong fileLength;
 
@@ -591,10 +597,11 @@ namespace AssetFileSystem
                     this.bakedAssets = bac;
                     this.assetId = assetId;
 
-                    //sha1Computer = System.Security.Cryptography.SHA1.Create();
-
-                    //sha1Computer2 = System.Security.Cryptography.SHA1.Create();
-
+                    if (DoSum)
+                    {
+                        sha1Computer = System.Security.Cryptography.SHA1.Create();
+                        sha1Computer2 = System.Security.Cryptography.SHA1.Create();
+                    }
 
                     if (Debug) Console.WriteLine($"UnbakeForFuse::Construct Asset={assetId}");
 
@@ -664,7 +671,8 @@ namespace AssetFileSystem
                             bigRemaining.CopyTo(bigMemory);
                             var bufferBytes = assetStream.Read(readBuffer.Span);
 
-                            //sha1Computer2.TransformBlock(readBuffer.ToArray(), 0, bufferBytes, readBuffer.ToArray(), 0);
+                            if (DoSum)
+                            sha1Computer2.TransformBlock(readBuffer.ToArray(), 0, bufferBytes, readBuffer.ToArray(), 0);
 
                             var newTotal = bigRemaining.Length + bufferBytes;
                             if (Debug)
@@ -680,33 +688,36 @@ namespace AssetFileSystem
                                 atEof = true;
                                 bigRemaining.Span.CopyTo(buffer);
 
-                                //sha1Computer.TransformBlock(bigRemaining.ToArray(), 0, bigRemaining.Length, bigRemaining.ToArray(), 0);
+                                if (DoSum)
+                                {
+                                    sha1Computer.TransformBlock(bigRemaining.ToArray(), 0, bigRemaining.Length, bigRemaining.ToArray(), 0);
 
-                                //sha1Computer.TransformFinalBlock(bigRemaining.ToArray(), 0, 0);
+                                    sha1Computer.TransformFinalBlock(bigRemaining.ToArray(), 0, 0);
 
-                                //sha1Computer2.TransformFinalBlock(bigRemaining.ToArray(), 0, 0);
+                                    sha1Computer2.TransformFinalBlock(bigRemaining.ToArray(), 0, 0);
 
-                                //var hashin = sha1Computer2.Hash;
+                                    var hashin = sha1Computer2.Hash;
 
-                                // The hashes aren't that interesting if system is skipping about
+                                    // The hashes aren't that interesting if system is skipping about
 
-                                //var sb = new StringBuilder();
-                                //for (var i = 0; i < hashin.Length; i++)
-                                //    sb.Append(hashin[i].ToString("x2"));
+                                    var sb = new StringBuilder();
+                                    for (var i = 0; i < hashin.Length; i++)
+                                        sb.Append(hashin[i].ToString("x2"));
 
-                                //Console.WriteLine($"Input Hash = {sb}");
+                                    Console.WriteLine($"Input Hash = {sb}");
 
-                                //var hashout = sha1Computer.Hash;
+                                    var hashout = sha1Computer.Hash;
 
-                                //sb = new StringBuilder();
-                                //for (var i = 0; i < hashout.Length; i++)
-                                //    sb.Append(hashout[i].ToString("x2"));
+                                    sb = new StringBuilder();
+                                    for (var i = 0; i < hashout.Length; i++)
+                                        sb.Append(hashout[i].ToString("x2"));
 
-                                //Console.WriteLine($"Output Hash = {sb}");
+                                    Console.WriteLine($"Output Hash = {sb}");
 
-                                //if (hashin != hashout)
-                                //    Console.WriteLine("[Hash Mismatch]");
-
+                                    if (hashin != hashout)
+                                        Console.WriteLine("[Hash Mismatch]");
+                                }
+                               
                                 return bigRemaining.Length;
                             }
 
@@ -746,7 +757,8 @@ namespace AssetFileSystem
 
                         if (Debug) Console.WriteLine($"[Return {retBytes} bytes - carry forward {bigRemaining.Length} - Current {CurrentPosition}");
 
-                        //sha1Computer.TransformBlock(copyBuf.ToArray(), 0, copyBuf.Length, copyBuf.ToArray(), 0);
+                        if (DoSum)
+                            sha1Computer.TransformBlock(copyBuf.ToArray(), 0, copyBuf.Length, copyBuf.ToArray(), 0);
 
                         return (int) retBytes;
                     }

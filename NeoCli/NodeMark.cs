@@ -16,6 +16,7 @@ public partial class Program
     public class NodeMark
     {
         public IMongoCollection<NeoVirtFS> NeoVirtFSCol { get; }
+        public IMongoCollection<NeoVirtFS> NeoVirtFSDeletedCol { get; }
 
         private FileNode m;
         private int level;
@@ -33,6 +34,7 @@ public partial class Program
         public NodeMark(FileNode m, int level, NodeMark[] stack, ObjectId rootOfVolume, IMongoDatabase db)
         {
             NeoVirtFSCol = db.NeoVirtFS();
+            NeoVirtFSDeletedCol = db.NeoVirtFSDeleted();
 
             this.m = m;
             this.level = level;
@@ -101,8 +103,8 @@ public partial class Program
                     var baRec = af.FindSync(theFilter).FirstOrDefault();
                     if (baRec == null)
                     {
-                        Console.WriteLine($"Can't find {Encoding.UTF8.GetString(realPath.ToArray())}");
-                        return;
+                        Console.WriteLine($"Can't find assetfile {Encoding.UTF8.GetString(realPath.ToArray())} - using file defaults");
+                        v.Stat = NeoVirtFSStat.FileDefault();
                     }
                     else
                     {
@@ -110,57 +112,38 @@ public partial class Program
 
                         //Console.WriteLine($"Found baRec {baRec._id}");
                         v.Stat = new NeoVirtFSStat(baRec.Stat).ToFile();
-
-                        // We've got to check the asset to see if it's actually annealed -- it could be lost
-                        // If we're a mirror we'll skip it
-
-                        var assFilter = Builders<BakedAssets>.Filter.Eq("_id", sha1);
-                        var ass = bac.FindSync(assFilter).FirstOrDefault();
-
-                        if (ass == null)
-                        {
-                            Console.WriteLine($"Can't find the asset");
-                            return;   // Should handle as 'lost' node
-                        }
-
-                        if (!ass.Annealed.Value)
-                        {
-                            Console.WriteLine($"Asset is not annealed - so that file is lost -- skipping");
-                            return;    // Should handle as 'lost' node
-                        }
-
-
                     }
 
+                    // We've got to check the asset to see if it's actually annealed -- it could be lost
+                    // If we're a mirror we'll skip it
+
+                    var assFilter = Builders<BakedAssets>.Filter.Eq("_id", sha1);
+                    var ass = bac.FindSync(assFilter).FirstOrDefault();
+
+                    if (ass == null)
+                    {
+                        Console.WriteLine($"Can't find the asset - {Encoding.UTF8.GetString(realPath.ToArray())} / {Encoding.UTF8.GetString(m.Name.ToArray())}");
+
+                        v.Stat.st_size = 0;   // We could conceivably try to look on the Asset for this - restore will need to fix the stat
+                        GenerateAssetFile(m, stack, rootOfVolume, v.Stat, sha1, realPath, true);
+
+                        return;   // Should handle as 'lost' node
+                    }
+
+                    v.Stat.st_size = ass.FileLength;  // RealLength is the compressed size
+
+                    if (!ass.Annealed.Value)
+                    {
+                        //Console.WriteLine($"Asset lost -- skipping - {Encoding.UTF8.GetString(realPath.ToArray())} / {Encoding.UTF8.GetString(m.Name.ToArray())}");
+                        GenerateAssetFile(m, stack, rootOfVolume, v.Stat, sha1, realPath,true);
+
+                        return;  
+                    }
+                                   
                     // If we get to here, we have an annealed asset type, so we need to process
                     Broken = false;
 
-                    var parentId = EvalFullPath(level, stack, rootOfVolume);
-
-                    var getFilter = Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x.ParentId, parentId) &
-                     Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x.Name, m.Name);
-
-                    var node = NeoVirtFSCol.FindSync(getFilter).FirstOrDefault();
-                    if (node != null)
-                    {
-                        // Node already exists, need to update it 
-                        nodeId = node._id;
-
-                        // Skip for now
-                        return;
-                    }
-
-                    v = NeoVirtFS.CreateNewFile(parentId,
-                        rootOfVolume,
-                        m.Name.ToArray(), 
-                        null, 
-                        v.Stat.st_mode.GetMode(),
-                        NeoVirtFSContent.AnnealedAsset(Convert.FromHexString(sha1)));
-
-                    Console.WriteLine($"Create Asset: {Encoding.UTF8.GetString(realPath.ToArray())} / {Encoding.UTF8.GetString(m.Name.ToArray())} Level={level}  Parent={parentId} Id={v._id} SHA1={sha1}");
-
-                    NeoVirtFSCol.InsertOne(v);
-
+                    GenerateAssetFile(m, stack, rootOfVolume, v.Stat, sha1, realPath, false);
                     return;
                 }
                 else
@@ -173,53 +156,130 @@ public partial class Program
             }
             else if (m.IsDir)
             {
-                var parentId = EvalFullPath(level, stack, rootOfVolume);
-
-                //Console.WriteLine($"Parent: {parentName} {parentId}");
-
-                var getFilter = Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x.ParentId, parentId) &
-                      Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x.Name, m.Name);
-
-                var node = NeoVirtFSCol.FindSync(getFilter).FirstOrDefault();
-                if (node != null)
-                {
-                    // Node already exists, need to update it 
-                    nodeId = node._id;
-
-                    if (node._id == parentId)
-                        throw new ApplicationException($"Looping directories: {Encoding.UTF8.GetString(realPath.ToArray())}");
-
-
-                    throw new ApplicationException($"Directory duplicated: {Encoding.UTF8.GetString(realPath.ToArray())} {Encoding.UTF8.GetString(m.Name.ToArray())}");
-
-                    // Skip for now
-                    return;
-                }
-
-                v = NeoVirtFS.CreateDirectory(parentId, rootOfVolume, m.Name.ToArray(), m.FileStat.st_mode);
-                nodeId = v._id;
-
-                if (v._id == parentId)
-                    throw new ApplicationException($"Looping directories 2: {Encoding.UTF8.GetString(realPath.ToArray())}");
-
-                Console.WriteLine($"Create Directory: {Encoding.UTF8.GetString(realPath.ToArray())} / {Encoding.UTF8.GetString(m.Name.ToArray())} Level={level}  Parent={parentId} Id={nodeId}");
-
-                NeoVirtFSCol.InsertOne(v);
-
-                Broken = false;
+                GenerateDirectory(m, stack, rootOfVolume, realPath);
                 return;
             }
             else if (m.IsFile)
             {
-                Console.WriteLine($"Encountered File: {Encoding.UTF8.GetString(realPath.ToArray())} / {Encoding.UTF8.GetString(m.Name.ToArray())}");
+                //Console.WriteLine($"Encountered File: {Encoding.UTF8.GetString(realPath.ToArray())} / {Encoding.UTF8.GetString(m.Name.ToArray())}");
+
+                Broken = false;
+
+                GeneratePhysicalFile(m, stack, rootOfVolume, realPath);
+                return;
             }
             else
             {
                 Console.WriteLine($"Unknown File: {Encoding.UTF8.GetString(realPath.ToArray())} / {Encoding.UTF8.GetString(m.Name.ToArray())}");
             }
+        }
 
+        private void GenerateDirectory(FileNode m, NodeMark[] stack, ObjectId rootOfVolume, List<byte> realPath)
+        {
+            var parentId = EvalFullPath(level, stack, rootOfVolume);
 
+            //Console.WriteLine($"Parent: {parentName} {parentId}");
 
+            var getFilter = Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x.ParentId, parentId) &
+                  Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x.Name, m.Name);
+
+            var node = NeoVirtFSCol.FindSync(getFilter).FirstOrDefault();
+            if (node != null)
+            {
+                // Node already exists, no need to update directory
+                nodeId = node._id;
+
+                //throw new ApplicationException($"Directory duplicated: {Encoding.UTF8.GetString(realPath.ToArray())} {Encoding.UTF8.GetString(m.Name.ToArray())}");
+
+                // Skip for now
+                return;
+            }
+
+            var v = NeoVirtFS.CreateDirectory(parentId, rootOfVolume, m.Name.ToArray(), m.FileStat.st_mode);
+            nodeId = v._id;
+
+            if (v._id == parentId)
+                throw new ApplicationException($"Looping directories 2: {Encoding.UTF8.GetString(realPath.ToArray())}");
+
+            //Console.WriteLine($"Create Directory: {Encoding.UTF8.GetString(realPath.ToArray())} / {Encoding.UTF8.GetString(m.Name.ToArray())} Level={level}  Parent={parentId} Id={nodeId}");
+
+            NeoVirtFSCol.InsertOne(v);
+
+            Broken = false;
+        }
+
+        private void GeneratePhysicalFile(FileNode m, NodeMark[] stack, ObjectId rootOfVolume, List<byte> realPath)
+        {
+            var parentId = EvalFullPath(level, stack, rootOfVolume);
+
+            var getFilter = Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x.ParentId, parentId) &
+             Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x.Name, m.Name);
+
+            var node = NeoVirtFSCol.FindSync(getFilter).FirstOrDefault();
+            if (node != null)
+            {
+                // Node already exists, need to update it 
+                nodeId = node._id;
+
+                // Skip for now
+                return;
+            }
+
+            realPath.Add((byte) '/');
+            realPath.AddRange(m.Name.ToArray());
+
+            var v = NeoVirtFS.CreateNewFile(parentId,
+                rootOfVolume,
+                m.Name.ToArray(),
+                null,
+                m.FileStat.st_mode,
+                NeoVirtFSContent.PhysicalFilePath(realPath.ToArray()));
+
+            Console.WriteLine($"Create Physical File: {Encoding.UTF8.GetString(realPath.ToArray())}"); // Level={level} Parent={parentId} Id={v._id}");
+
+            NeoVirtFSCol.InsertOne(v);
+        }
+
+        private void GenerateAssetFile(FileNode m, NodeMark[] stack, ObjectId rootOfVolume, NeoVirtFSStat stat, string sha1, List<byte> realPath, bool lost)
+        {
+            var parentId = EvalFullPath(level, stack, rootOfVolume);
+
+            var getFilter = Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x.ParentId, parentId) &
+             Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x.Name, m.Name);
+
+            var node = NeoVirtFSCol.FindSync(getFilter).FirstOrDefault();
+            if (node != null)
+            {
+                // Node already exists, need to update it 
+                nodeId = node._id;
+
+                // Skip for now
+                return;
+            }
+ 
+            var v = NeoVirtFS.CreateNewFile(parentId,
+                rootOfVolume,
+                m.Name.ToArray(),
+                null,
+                stat.st_mode.GetMode(),
+                NeoVirtFSContent.AnnealedAsset(Convert.FromHexString(sha1), lost));
+
+            if (lost)
+                v.DeleteType = DeleteTypes.LOST;
+
+            var lst = "";
+            if (lost)
+            {
+                lst = "[Lost] ";
+                Console.WriteLine($"{lst}Create Asset: {Encoding.UTF8.GetString(realPath.ToArray())} / {Encoding.UTF8.GetString(m.Name.ToArray())} SHA1={sha1}");
+            }
+     
+            // Create LOST assets into the deleted collection so it might be possible to ressurect if they later appear
+
+            var procDb = lost ? NeoVirtFSDeletedCol : NeoVirtFSCol;
+            procDb.InsertOne(v);
+
+            return;
         }
 
         private ObjectId EvalFullPath(int level, NodeMark[] stack, ObjectId rootOfVolume)

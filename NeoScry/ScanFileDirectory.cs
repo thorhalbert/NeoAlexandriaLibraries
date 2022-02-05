@@ -142,6 +142,7 @@ namespace NeoScry
     {
         private stat fileStat;
 
+        //public ReadOnlyMemory<byte> PhysicalPath { get; internal set; }
         public ReadOnlyMemory<byte> Name { get; internal set; }
         public stat FileStat { get => fileStat; internal set => fileStat = value; }
         public ReadOnlyMemory<byte> SymbolicLink { get; internal set; }
