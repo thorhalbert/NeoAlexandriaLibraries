@@ -143,9 +143,11 @@ namespace NeoScry
         private stat fileStat;
 
         //public ReadOnlyMemory<byte> PhysicalPath { get; internal set; }
-        public ReadOnlyMemory<byte> Name { get; internal set; }
+        public byte[] Name { get; internal set; }
+        public string Name_HR { get; internal set; }
         public stat FileStat { get => fileStat; internal set => fileStat = value; }
-        public ReadOnlyMemory<byte> SymbolicLink { get; internal set; }
+        public byte[] SymbolicLink { get; internal set; }
+        public string SymbolicLink_HR { get; internal set; }
 
         public List<FileNode> Members { get; } = new List<FileNode>();
 
@@ -154,6 +156,7 @@ namespace NeoScry
         internal unsafe void Load(ReadOnlySpan<byte> startingPath, ReadOnlySpan<byte> name)
         {
             Name = name.ToArray();
+            Name_HR = human(Name);
 
             var ret = ScanFileDirectory.Stat(startingPath, ref fileStat);
             if (ret != 0) throw new LinuxError(ret);
@@ -167,11 +170,33 @@ namespace NeoScry
                 retl = LibC.readlink(startingPath.ToBytePtr(), b, buffer.Length);
             }
 
-            SymbolicLink = MemoryExtensions.AsMemory<byte>(buffer, 0, (int) retl);        
+            SymbolicLink = MemoryExtensions.AsMemory<byte>(buffer, 0, (int) retl).ToArray();
+            SymbolicLink_HR = human(SymbolicLink);
         }
 
-        public bool IsDir { get { return (FileStat.st_mode & LibC.S_IFMT) == LibC.S_IFDIR; } }
-        public bool IsFile { get { return (FileStat.st_mode & LibC.S_IFMT) == LibC.S_IFREG; } }
-        public bool IsLnk { get { return (FileStat.st_mode & LibC.S_IFMT) == LibC.S_IFLNK; } }
+        private string human(byte[] name)
+        {
+            try
+            {
+                return Encoding.UTF8.GetString(name);
+            }
+            catch {
+                return $"0x{Convert.ToHexString(name)}";
+            }
+
+        }
+
+        // We kind of need to extrovert these because the json serializer is stupid
+        // and won't serialize structs yet
+        public bool IsDir => (FileStat.st_mode & LibC.S_IFMT) == LibC.S_IFDIR;
+        public bool IsFile => (FileStat.st_mode & LibC.S_IFMT) == LibC.S_IFREG;
+        public bool IsLnk => (FileStat.st_mode & LibC.S_IFMT) == LibC.S_IFLNK;
+        public long st_size => (long) FileStat.st_size;
+        public ulong st_mode { get { return ((ulong) FileStat.st_mode); } }
+        public DateTimeOffset st_ctim => FileStat.st_ctim.ToDTO();
+        public DateTimeOffset st_mtim => FileStat.st_mtim.ToDTO();
+        public DateTimeOffset st_atim => FileStat.st_atim.ToDTO();
+        public long st_uid => FileStat.st_uid;
+        public long st_gid => FileStat.st_gid;
     }
 }

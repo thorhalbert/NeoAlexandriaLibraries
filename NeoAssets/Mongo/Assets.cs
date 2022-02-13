@@ -278,11 +278,14 @@ namespace NeoAssets.Mongo
     }
     public class Assets_Hashes
     {
+        // Need to phase out the text hashes
         [BsonIgnoreIfNull] public string MD5 { get; set; }  // 3536740/4000000
-        [BsonIgnoreIfNull] public string SHA256 { get; set; }   // 3536740/4000000
         [BsonIgnoreIfNull] public string TIGER { get; set; }    // 3536740/4000000
         [BsonIgnoreIfNull] public string WHIRLPOOL { get; set; }    // 3536740/4000000
         [BsonIgnoreIfNull] public string SHA1 { get; set; } // 1229364/4000000
+        [BsonIgnoreIfNull] public string SHA256 { get; set; }   // 3536740/4000000
+        [BsonIgnoreIfNull] public byte[] SHA384 { get; set; }
+        [BsonIgnoreIfNull] public byte[] SHA512 { get; set; }
     }
     public class Assets_IAMisc
     {

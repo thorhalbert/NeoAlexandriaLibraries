@@ -9,6 +9,10 @@ using System.Text;
 using Tmds.Linux;
 using NeoRepositories.Mongo;
 using System.Linq;
+using NeoCommon;
+using NeoBakedVolumes.Mongo;
+using static NeoAssets.Mongo.NeoVirtFS;
+using NeoVirtFS.Events;
 
 namespace NeoAssets.Mongo
 {
@@ -67,7 +71,7 @@ namespace NeoAssets.Mongo
         CREATE = 3,
         RENAMEOVER = 4,
         RMDIR = 5,
-        LOST=99,
+        LOST = 99,
     }
     public class NeoVirtFS
     {
@@ -115,6 +119,65 @@ namespace NeoAssets.Mongo
             Stat.GetStat(ref stat, nstat);
         }
 
+        public static void DoAnneal(IMongoDatabase db, string obj, string p, bool assetDebug)
+        {
+            var vir = db.NeoVirtFS();
+
+            ObjectId id;
+            try
+            {
+                id = ObjectId.Parse(obj);
+            }
+            catch
+            {
+                Console.WriteLine($"Bad object key {obj}");
+                return;
+            }
+
+            var filter = Builders<NeoVirtFS>.Filter.Eq(x => x._id, id);
+            var node = vir.FindSync(filter).FirstOrDefault();
+            if (node == null) {
+                Console.WriteLine($"Can't find file node {id}");
+                var del = new byte[] { (byte) '.', (byte) 'o', (byte) 'l', (byte) 'd' };
+
+                if (p != null)
+                {
+                    Console.WriteLine($"Mark Redundant cache file as old: {p}");
+                    RenameFile(p, del);
+                }
+                return;
+            }
+
+            byte[] setSha1;
+            if (!node.DeepAnneal(db, p, assetDebug, out setSha1))
+            {
+                Console.WriteLine($"Could not Anneal: {id} {p}");
+                var eventRec = new Event_FileNeedsBaked
+                {
+                    EventTime = DateTimeOffset.Now,
+                    ServerName = Environment.MachineName,
+                    VolumeId = node.VolumeId.ToString(),
+                    FileId = node._id.ToString(),
+                    AssetSha1 = setSha1
+                };
+
+                eventRec.SendMessage();
+                Console.WriteLine("SendMessage called");
+            }else
+            {
+                var eventRec = new Event_FileAnnealed
+                {
+                    EventTime = DateTimeOffset.Now,
+                    ServerName = Environment.MachineName,
+                    VolumeId = node.VolumeId.ToString(),
+                    FileId = node._id.ToString(),
+                    AssetSha1 = setSha1
+                };
+
+                eventRec.SendMessage();
+            }
+        }
+
         public static NeoVirtFS CreateDirectory(ObjectId parId, ObjectId volId, byte[] name, mode_t mode)
         {
             var newRec = new NeoVirtFS()
@@ -130,7 +193,7 @@ namespace NeoAssets.Mongo
 
             return newRec;
         }
-        public static NeoVirtFS CreateNewFile(ObjectId parId, ObjectId volId, byte[] name, ReadOnlySpan<byte> path, mode_t mode, NeoVirtFSContent cont=null)
+        public static NeoVirtFS CreateNewFile(ObjectId parId, ObjectId volId, byte[] name, ReadOnlySpan<byte> path, mode_t mode, NeoVirtFSContent cont = null)
         {
             var id = ObjectId.GenerateNewId();
 
@@ -140,7 +203,7 @@ namespace NeoAssets.Mongo
             //Console.WriteLine($"Set newId for file to {id}");
             var newRec = new NeoVirtFS
             {
-                _id = id, 
+                _id = id,
                 Name = name,
                 VolumeId = volId,
                 ParentId = parId,
@@ -318,7 +381,7 @@ namespace NeoAssets.Mongo
         /// <param name="rootNameSpace"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentException"></exception>
-        private static (NeoVirtFSNamespaces parentPath, string volumeName) FindVolumeNameWithPath(string volumeNamePath, 
+        private static (NeoVirtFSNamespaces parentPath, string volumeName) FindVolumeNameWithPath(string volumeNamePath,
             Dictionary<ObjectId, NeoVirtFSNamespaces> namespaces,
             NeoVirtFSNamespaces rootNameSpace)
         {
@@ -335,11 +398,12 @@ namespace NeoAssets.Mongo
 
                 if (nameTree.ContainsKey(p))
                     nameTree[p].Add(n.Value.NameSpace, n.Key);
-                else { 
+                else
+                {
                     var newT = new Dictionary<string, ObjectId>();
                     newT.Add(n.Value.NameSpace, n.Key);
                     nameTree.Add(n.Value.ParentId, newT);
-                };         
+                };
             }
 
             var paths = volumeNamePath.Split('/');
@@ -354,7 +418,7 @@ namespace NeoAssets.Mongo
             // Have top stop one before the end
             foreach (var p in paths[..^1])
             {
-                if (levelMembers==null)
+                if (levelMembers == null)
                     throw new ArgumentException($"Path Element {p} has no children");
 
                 if (!levelMembers.ContainsKey(p))
@@ -377,9 +441,9 @@ namespace NeoAssets.Mongo
             return (retParent, paths.Last());
         }
 
-        private static void ProcessNamespaces(IMongoDatabase db, 
-            Dictionary<string, NeoVirtFSNamespaces> NamespaceNames, 
-            Dictionary<ObjectId, NeoVirtFSNamespaces> Namespaces, 
+        private static void ProcessNamespaces(IMongoDatabase db,
+            Dictionary<string, NeoVirtFSNamespaces> NamespaceNames,
+            Dictionary<ObjectId, NeoVirtFSNamespaces> Namespaces,
             ref NeoVirtFSNamespaces RootNameSpace,
             ref bool HaveRoot,
             List<WriteModel<NeoVirtFS>> updates)
@@ -437,6 +501,200 @@ namespace NeoAssets.Mongo
             return null;
         }
 
+        public bool DeepAnneal(IMongoDatabase db, string checkFile, bool assetDebug, out byte[] sha1)
+        {
+            sha1 = Array.Empty<byte>();
+
+            switch (Content.ContentType)
+            {
+                case VirtFSContentTypes.NotAFile:
+                    return false;
+                case VirtFSContentTypes.Asset:
+                    var bad = new byte[] { (byte) '.', (byte) 'b', (byte) 'a', (byte) 'd' };
+                    if (checkFile != null)
+                        RenameFile(checkFile, bad);
+                    return false;
+                case VirtFSContentTypes.MountedVolume:
+                    return false;
+                case VirtFSContentTypes.PhysicalFile:
+                    return DeepAnnealFile(db, Content.PhysicalFile, null, assetDebug, out sha1);
+                case VirtFSContentTypes.CachePool:
+                    var cFile = checkFile;
+                    if (Content.CacheFile.SequenceEqual(Encoding.ASCII.GetBytes(cFile)))
+                        cFile = null;
+                    return DeepAnnealFile(db, Content.CacheFile, cFile, assetDebug, out sha1);
+            }
+
+            return false;
+        }
+
+        private unsafe bool DeepAnnealFile(IMongoDatabase db, byte[] fileName, string realCache, bool assetDebug, out byte[] catchSha1)
+        {
+            // We need to get the SHA1 hash
+
+            catchSha1 = Array.Empty<byte>();
+
+            var hash = fastSha1(fileName);
+            if (hash == null) return false;
+
+            catchSha1 = hash;
+
+            var hashHex = Convert.ToHexString(hash).ToLowerInvariant();
+            Console.WriteLine($"[Anneal: SHA1 {hashHex}]");
+
+            // So, we see if we've got an annealed asset
+
+            var bac = db.BakedAssets();
+            var bav = db.BakedVolumes();
+            var nvb = db.NeoVirtFS();
+
+            var theFilter = Builders<BakedAssets>.Filter.Eq("_id", hashHex);
+            var baRec = bac.FindSync(theFilter).FirstOrDefault();
+            if (baRec == null)
+            {
+                Console.WriteLine($"Can't find an asset for {hashHex} file {fileName.GetString()}");
+                return false;
+            }
+
+            if (!baRec.Annealed.Value)
+            {
+                Console.WriteLine($"This asset is not annealed {hashHex} file {fileName.GetString()}");
+                return false;
+            }
+
+            // Ok.  Now we've got an asset.   We're going to see if it's actually valid 
+            // (Which is the "Deep" part).   We're not going to assume for now until this is truly all tested.
+
+            var catchHash = GetAssetHash(db, hashHex, bac, bav, assetDebug);
+
+            // If the hash is the same then we can anneal
+            if (hashHex == catchHash)
+            {
+                var purgeFile = (Content.ContentType == VirtFSContentTypes.CachePool);
+
+                Content = NeoVirtFSContent.AnnealedAsset(hash, false);
+
+                var filter = Builders<NeoAssets.Mongo.NeoVirtFS>.Filter.Eq(x => x._id, this._id);
+                var insert = nvb.ReplaceOne(filter, this, options: new ReplaceOptions { IsUpsert = false });
+                Console.WriteLine($"[Deep Anneal {fileName.GetString()} Id {_id} SHA1 {hashHex}]");
+
+                // Though if the insert succeded we really need to delete the old file (or rename) - only if this was a cache
+
+                if (purgeFile)
+                {
+                    var del = new byte[] { (byte) '.', (byte) 'd', (byte) 'e', (byte) 'l', (byte) 'e', (byte) 't', (byte) 'e', (byte) 'd' };
+
+                    RenameFile(fileName, del);
+                }
+
+                // Rename the incoming file if it's not the same cachefile as the object has (we already just renamed that)
+                var bad = new byte[] { (byte) '.', (byte) 'b', (byte) 'a', (byte) 'd' };
+                if (realCache != null)
+                    RenameFile(realCache, bad);
+
+                return true;
+            }
+            else
+                Console.WriteLine($"Anneal: The Baked Hash should have been {hashHex} but was {catchHash}");
+
+
+            return false;
+        }
+        private static void RenameFile(string fileName, byte[] del)
+        {
+            RenameFile(Encoding.ASCII.GetBytes(fileName), del);
+        }
+        private unsafe static void RenameFile(byte[] fileName, byte[] del)
+        {
+            var newPath = new List<byte>(fileName);
+            newPath.AddRange(del);
+
+            var res = LibC.unlink(toBp(newPath.ToArray()));
+            // Ignore result - file probably doesn't exist
+
+            res = LibC.link(toBp(fileName), toBp(newPath.ToArray()));
+            if (res < 0)
+                Console.WriteLine($"Could not rename away {LibC.errno}");
+
+            res = LibC.unlink(toBp(fileName));
+            // We will ignore this too
+        }
+
+        private static string GetAssetHash(IMongoDatabase db, string hashHex, IMongoCollection<BakedAssets> bac, IMongoCollection<BakedVolumes> bav, bool assetDebug)
+        {
+            Console.WriteLine($"Check Baked File: {hashHex}");
+
+            var assetLink = new AssetFileSystem.AssetFile.UnbakeForFuse(db, bac, bav, hashHex, assetDebug);
+
+            string catchHash = null;
+            using (var hasher = System.Security.Cryptography.SHA1.Create())
+            {
+                var buffer = new Span<byte>(new byte[4096]);
+                int r = buffer.Length;
+
+                ulong offset = 0;
+
+                while (r > 0)
+                {
+                    r = assetLink.Read(offset, buffer);
+                    if (r > 0)
+                    {
+                        offset += (ulong) r;
+                        var bf = buffer.ToArray();
+                        hasher.TransformBlock(bf, 0, (int) r, bf, 0);
+                    }
+                }
+
+                hasher.TransformFinalBlock(buffer.ToArray(), 0, 0);
+
+                catchHash = Convert.ToHexString(hasher.Hash).ToLowerInvariant();
+            }
+
+            return catchHash;
+        }
+
+        private static unsafe byte[] fastSha1(byte[] fileName)
+        {
+            var iot = LibC.open(toBp(fileName), 0);
+            if (iot < 0)
+            {
+                Console.WriteLine($"Can't open file: {fileName.GetString()}");
+                return null;
+            }
+
+            using (var hasher = System.Security.Cryptography.SHA1.Create())
+            {
+                var buffer = new Span<byte>(new byte[4096]);
+                ssize_t r = buffer.Length;
+
+                while (r > 0)
+                {
+                    fixed (byte* b = buffer)
+                    {
+                        r = LibC.read(iot, b, buffer.Length);
+                    }
+
+                    if (r > 0)
+                    {
+                        var bf = buffer.ToArray();
+                        hasher.TransformBlock(bf, 0, (int) r, bf, 0);
+                    }
+                }
+
+                hasher.TransformFinalBlock(buffer.ToArray(), 0, 0);
+
+                return hasher.Hash;
+            }
+        }
+
+        public static unsafe byte* toBp(ReadOnlySpan<byte> path)
+        {
+            return RawDirs.ToBytePtr(path.ToArray());
+        }
+        public static unsafe byte* toBp(byte[] path)
+        {
+            return RawDirs.ToBytePtr(path);
+        }
         public NeoVirtFS MakeLink(NeoVirtFS par, byte[] newFile)
         {
             var ret = (NeoVirtFS) this.MemberwiseClone();
@@ -450,7 +708,7 @@ namespace NeoAssets.Mongo
 
             // New name
             ret.Name = newFile;
-         
+
             return ret;
         }
 
@@ -469,7 +727,7 @@ namespace NeoAssets.Mongo
             // Return dynamic attributes
             foreach (var a in Attributes.Elements)
                 ret.Add(Encoding.ASCII.GetBytes(a.Name));
-            
+
             return ret;
         }
 
@@ -488,13 +746,13 @@ namespace NeoAssets.Mongo
 
         }
 
-        public unsafe int  Truncate(ulong length)
+        public unsafe int Truncate(ulong length)
         {
             switch (Content.ContentType)
             {
                 case VirtFSContentTypes.CachePool:
 
-                    var res = LibC.truncate(Content.CacheFile.ToBytePtr(), (long) length);
+                    var res = LibC.truncate(RawDirs.ToBytePtr(Content.CacheFile), (long) length);
 
                     if (res < 0) res = -LibC.errno;
                     return res;
@@ -532,7 +790,7 @@ namespace NeoAssets.Mongo
         [BsonIgnoreIfNull] public byte[] PhysicalFile { get; set; }  // Linkage (split) to physicalfile (though for NARPS they should be the /NARP path)
 
         // CachePool = 50,
-      
+
         // It was a tossup between using an objectId here and a guid.  
         // Guid was more positional, so seemed a better way to generate an id
         [BsonIgnoreIfNull] public Guid? CachePoolGuid { get; set; }
@@ -586,7 +844,12 @@ namespace NeoAssets.Mongo
 
             // Ultimately will need real pool mechanism here
 
-            var cacheFile = $"/ua/NeoVirtCache/{fileg.Substring(0,2)}/{fileg.Substring(2,2)}/{fileg.Substring(4,2)}/{fileg.Substring(6,2)}/{fileg}_{nodeObj}";
+            // Original scheme was absurd - the 3 digit is 4096.  If we're sufficiently event driven and reactive then this shouldn't get
+            // out of hand -- it should handle millions of physical cache files without too much difficulty, and really if they're annealled
+            // quickly enough there should never be that many on a given filesystem
+
+            //var cacheFile = $"/ua/NeoVirtCache/{fileg.Substring(0, 2)}/{fileg.Substring(2, 2)}/{fileg.Substring(4, 2)}/{fileg.Substring(6, 2)}/{fileg}_{nodeObj}";
+            var cacheFile = $"/ua/NeoVirtCache/{fileg.Substring(0, 3)}/{fileg}_{nodeObj}";
 
             var rec = new NeoVirtFSContent
             {
@@ -600,12 +863,12 @@ namespace NeoAssets.Mongo
 
         internal void GetAttributeList(List<byte[]> ret)
         {
-           switch (ContentType)
+            switch (ContentType)
             {
                 case VirtFSContentTypes.NotAFile:
                     break;
                 case VirtFSContentTypes.Asset:  // Annealed files
-                    exposeAsset(AssetSHA1, ret);                
+                    exposeAsset(AssetSHA1, ret);
                     // If we load the asset, we might expose many of the asset attributes, at least hashes and file types
                     break;
 
@@ -655,9 +918,9 @@ namespace NeoAssets.Mongo
 
             st_mode = (NeoMode_T) Convert.ToUInt32(stat.mode);
 
-            st_ctim = DateTimeOffset.FromUnixTimeMilliseconds(stat.ctime*1000);
-            st_mtim = DateTimeOffset.FromUnixTimeMilliseconds(stat.mtime*1000);
-            st_atim = DateTimeOffset.FromUnixTimeMilliseconds(stat.atime*1000);
+            st_ctim = DateTimeOffset.FromUnixTimeMilliseconds(stat.ctime * 1000);
+            st_mtim = DateTimeOffset.FromUnixTimeMilliseconds(stat.mtime * 1000);
+            st_atim = DateTimeOffset.FromUnixTimeMilliseconds(stat.atime * 1000);
 
             st_dtim = DateTimeOffset.MinValue;
         }
@@ -682,7 +945,7 @@ namespace NeoAssets.Mongo
         public bool IsFile { get { return (st_mode & NeoMode_T.S_IFREG) != 0; } }
 
         public static NeoVirtFSStat DirDefault(uint mode = 0b111_101_101)
-        {        
+        {
             var stt = DateTimeOffset.UtcNow;
 
             var st = new NeoVirtFSStat()
@@ -697,7 +960,7 @@ namespace NeoAssets.Mongo
                 st_dtim = DateTimeOffset.MinValue,
             };
 
-            return st; 
+            return st;
         }
 
         // Cast us to a file type 
@@ -804,7 +1067,7 @@ namespace NeoAssets.Mongo
     public class NeoVirtFSSecPrincipals
     {
         [BsonId] public ObjectId _id { get; set; }
-        [BsonRequired] public NeoVirtFSSecPrincipalTypes PrincipalType {get;set;}
+        [BsonRequired] public NeoVirtFSSecPrincipalTypes PrincipalType { get; set; }
         // Roles assigned to Principal (can also be roles assigned to roles, recursively)
         // Ultimately this is a union of all
         [BsonRequired] public ObjectId[] Roles { get; set; }

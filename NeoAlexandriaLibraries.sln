@@ -63,11 +63,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeoCli", "NeoCli\NeoCli.csp
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PenguinSanitizer", "PenguinSanitizer\PenguinSanitizer.csproj", "{3BB12802-1C12-4713-9B70-437763227B9A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeoMineManager.Server", "NeoMineManager\Server\NeoMineManager.Server.csproj", "{AB765123-B240-4013-8759-CC5153C6557F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeoMineManager.Server", "NeoMineManager\Server\NeoMineManager.Server.csproj", "{AB765123-B240-4013-8759-CC5153C6557F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeoMineManager.Client", "NeoMineManager\Client\NeoMineManager.Client.csproj", "{E8FD0BB7-5F97-4AB5-8E09-B0D3817E750A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeoMineManager.Client", "NeoMineManager\Client\NeoMineManager.Client.csproj", "{E8FD0BB7-5F97-4AB5-8E09-B0D3817E750A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeoMineManager.Shared", "NeoMineManager\Shared\NeoMineManager.Shared.csproj", "{F42A0812-EC91-48BF-B964-D70607DB42B3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeoMineManager.Shared", "NeoMineManager\Shared\NeoMineManager.Shared.csproj", "{F42A0812-EC91-48BF-B964-D70607DB42B3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeoCliFunctions", "NeoCliFunctions\NeoCliFunctions.csproj", "{BC7901F5-168B-4586-8933-892DC2D72733}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -163,6 +165,10 @@ Global
 		{F42A0812-EC91-48BF-B964-D70607DB42B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F42A0812-EC91-48BF-B964-D70607DB42B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F42A0812-EC91-48BF-B964-D70607DB42B3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BC7901F5-168B-4586-8933-892DC2D72733}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC7901F5-168B-4586-8933-892DC2D72733}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC7901F5-168B-4586-8933-892DC2D72733}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC7901F5-168B-4586-8933-892DC2D72733}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

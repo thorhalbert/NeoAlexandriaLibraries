@@ -10,6 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\NeoBakedVolumes\NeoBakedVolumes.csproj" />
     <ProjectReference Include="..\NeoCommon\NeoCommon.csproj" />
     <ProjectReference Include="..\NeoRepositories\NeoRepositories.csproj" />
     <ProjectReference Include="..\PenguinSanitizer\PenguinSanitizer.csproj" />

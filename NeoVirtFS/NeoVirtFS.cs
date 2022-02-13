@@ -815,7 +815,7 @@ namespace NeoVirtFS
 
         public override int StatFS(ReadOnlySpan<byte> path, ref statvfs statfs)
         {
-            if (verbosity > 0)
+            if (verbosity > 5)
                 Console.WriteLine($"StatFS {path.GetString()}");
 
             int error = 0,level=0;
@@ -829,7 +829,7 @@ namespace NeoVirtFS
 
         public override int UpdateTimestamps(ReadOnlySpan<byte> path, ref timespec atime, ref timespec mtime, FuseFileInfoRef fiRef)
         {
-            if (verbosity > 0)
+            if (verbosity > 5)
                 Console.WriteLine($"UpdateTimestamps {path.GetString()} atime={atime.ToDTO()} mtime={mtime.ToDTO()}");
 
             int error = 0, level = 0;

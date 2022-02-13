@@ -1,5 +1,4 @@
-﻿
-using CommandLine;
+﻿using CommandLine;
 using NeoScry;
 using PenguinSanitizer;
 using System.Reflection;
@@ -11,6 +10,11 @@ using NeoCommon;
 using MongoDB.Driver;
 using NeoBakedVolumes.Mongo;
 using MongoDB.Bson;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Collections.Generic;
+using Confluent.Kafka;
+using NeoCliFunctions;
 
 namespace NeoCli;
 
@@ -39,10 +43,7 @@ public partial class Program
 
     public static IMongoCollection<NeoVirtFSVolumes> NeoVirtFSVolumesCol { get; private set; }
 
-    [Verb("assimilate", HelpText = "Add physical directory to neo-virtual-fs")]
-    class AssimilateOptions
-    { //normal options here
-    }
+
     [Verb("scry", HelpText = "Determine metadata for files")]
     class ScryOptions
     { //normal options here
@@ -50,38 +51,194 @@ public partial class Program
     [Verb("anneal", HelpText = "Convert physical files to virtual-baked")]
     class AnnealOptions
     { //normal options here
+        [Value(0)]
+        public IEnumerable<string> Targets { get; set; }
+
+        [Option('a', "assetdebug", Required = false,  HelpText = "Turn on debugging in asset decoder")]
+        public bool AssetDebug { get; set; }
     }
     [Verb("bake", HelpText = "Generate baked file components")]
     class BakeOptions
     { //normal options here
     }
+    [Verb("import-narp", HelpText = "Import an existing NARP")]
+    class ImportNARPOptions
+    { //normal options here
+        [Value(0)]
+        public IEnumerable<string> NarpList { get; set; }
+    }
+    [Verb("dump-physical", HelpText = "Dump the backup of a physical NARP")]
+    class DumpNARPOptions
+    { //normal options here
+        [Value(0)]
+        public IEnumerable<string> NarpList { get; set; }
+    }
 
+    [Verb("server", HelpText = "Test Server")]
+    class ServerOptions
+    { //normal options here
+        //[Value(0)]
+        //public IEnumerable<string> NarpList { get; set; }
+    }
 
     static int Main(string[] args)
     {
         db = NeoMongo.NeoDb;
 
         af = db.AssetFiles();
-        bac = db.BakedAssets();
+        bac = db.BakedAssets();      
         bvol = db.BakedVolumes();
 
         NeoVirtFSVolumesCol = db.NeoVirtFSVolumes();
 
-        var verbs = Assembly.GetExecutingAssembly().GetTypes()
-            .Where(t => t.GetCustomAttribute<VerbAttribute>() != null).ToArray();
+        var typesL = Assembly.GetExecutingAssembly().GetTypes()
+            .Where(t => t.GetCustomAttribute<VerbAttribute>() != null).ToList();
 
-        Parser.Default.ParseArguments(args, verbs)
-            .WithParsed<AssimilateOptions>(options => { })
-            .WithParsed<ScryOptions>(options => { })
-            .WithParsed<AnnealOptions>(options => { })
-            .WithParsed<BakeOptions>(options => { })
-            .WithNotParsed(errors => { });
+        var types = GetVerbs.GetVerbInAssembly(typesL);
 
-        var start = "Mirrors-bitsavers";
-        AssimilateNarp(start);
+        Parser.Default.ParseArguments(args, types)
+              .WithParsed(Run_Command)
+              .WithNotParsed(HandleErrors);
 
-
+       
         return 0;
+    }
+
+    private static void HandleErrors(IEnumerable<CommandLine.Error> obj)
+    {
+        foreach (var v in obj)
+            Console.WriteLine($"Error: {v.Tag}");
+    }
+
+    private static void Run_Command(object obj)
+    {
+        switch (obj)
+        {
+            case ScryOptions c:
+                Console.WriteLine("Command scry");
+                break;
+            case AnnealOptions o:
+                //Console.WriteLine("Command anneal");
+                AnnealTargets(db, o.Targets, o.AssetDebug);
+                break;
+            case BakeOptions a:
+                Console.WriteLine("Command bake");
+                break;
+            case ImportNARPOptions a:
+                //Console.WriteLine("Command import-narp");
+                foreach (var narp in a.NarpList)
+                    AssimilateNarp(narp);
+                break;
+            case DumpNARPOptions a:
+                //Console.WriteLine("Command dump-narp");
+                foreach (var narp in a.NarpList)
+                    DumpNARP(narp);
+                break;
+            case ServerOptions s:
+                procServer();
+                break;
+
+            default:
+                if (obj is ICommandCallable call)
+                {
+                    // Load it up
+                    call.db = db;
+
+                    // Run it
+                    call.RunCommand();
+                }
+                else throw new ArgumentException("Unknown/Unimplemented Arguments");
+
+                break;
+        }
+        Console.WriteLine("");
+    }
+
+    private static void procServer()
+    {
+        var config = new ConsumerConfig
+        {
+            BootstrapServers = "cirdan:9092",
+            GroupId = "test",
+            AutoOffsetReset = AutoOffsetReset.Earliest
+        };
+
+        using (var consumer = new ConsumerBuilder<string, string>(config).Build())
+        {
+            var topics = new List<string>();
+            topics.Add("neofiles");
+            consumer.Subscribe(topics);
+
+            CancellationTokenSource cts = new CancellationTokenSource();
+           
+            try
+            {
+                while (true)
+                {
+                    try
+                    {
+                        var cr = consumer.Consume(cts.Token);
+
+                        Console.WriteLine($"Consumed message {cr.Key}/{cr.Value} at: '{cr.TopicPartitionOffset}'.");
+                    }
+                    catch (ConsumeException e)
+                    {
+                        Console.WriteLine($"Error occurred: {e.Error.Reason}");
+
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Ensure the consumer leaves the group cleanly and final offsets are committed.
+                consumer.Close();
+            }     
+
+            consumer.Close();
+        }
+    }
+
+    private static void AnnealTargets(IMongoDatabase db, IEnumerable<string> targets, bool assetDebug)
+    {
+        // cfe1f8f2-65fa-5f28-b1d5-d337648658fc_61ff2a33540d6fe877a01ca3
+        // 000000000111111111122222222223333333333444444444455555555556666666666
+        // 1234567890123456789012345678901234567890123456789012345678901234567890
+
+        foreach (var t in targets)
+        {
+            var obj = "";
+
+            var tar = t.Split('/');
+            var pth = tar.Last();
+            if (pth.Length == 61)
+            {
+                obj = pth.Substring(37);
+                NeoAssets.Mongo.NeoVirtFS.DoAnneal(db, obj, t, assetDebug);
+            }
+            else
+                NeoAssets.Mongo.NeoVirtFS.DoAnneal(db, t, null, assetDebug);
+        }
+    }
+
+    private static void DumpNARP(string narp)
+    {
+        NeoVirtFSVolumes.EnsureNarpVolumeExists(db, narp);
+
+        // Just the beginning path (maybe we'll support the leading / but we're doing the normalized version)
+
+        var volume = $"NARP/{narp}";
+
+        if (narp.StartsWith("Mirror", StringComparison.InvariantCulture) ||
+            narp.StartsWith("IA-", StringComparison.InvariantCulture))
+            volume = $"MIRRORS/{narp}";
+
+        //var rootOfVolume = NeoVirtFS.EnsureVolumeSetUpProperly(db, volume);
+
+        Console.WriteLine($"Scan Physical: {narp}");
+        //Console.WriteLine($"Volume Root: {rootOfVolume}");
+
+        var scan = ScanFileDirectory.RecursiveScan($"/NARP/{narp}/".ToSpan(), narp.ToSpan());
+        dumpPhysical(scan, narp);
     }
 
     private static void AssimilateNarp(string narp)
@@ -90,16 +247,37 @@ public partial class Program
 
         // Just the beginning path (maybe we'll support the leading / but we're doing the normalized version)
 
-        var volume = $"MIRRORS/{narp}";
+        var volume = $"NARP/{narp}";
 
-        var rootOfVolume = NeoVirtFS.EnsureVolumeSetUpProperly(db, volume);
+        if (narp.StartsWith("Mirror", StringComparison.InvariantCulture) ||
+            narp.StartsWith("IA-", StringComparison.InvariantCulture))
+            volume = $"MIRRORS/{narp}";
+
+        var rootOfVolume = NeoAssets.Mongo.NeoVirtFS.EnsureVolumeSetUpProperly(db, volume);
 
         Console.WriteLine($"Scan Physical: {narp}");
         Console.WriteLine($"Volume Root: {rootOfVolume}");
 
-        var scan = ScanFileDirectory.RecursiveScan($"/NARP/{narp}/".ToSpan(),narp.ToSpan());
+        Console.WriteLine($"Assimilate/Import NARP {narp} - map to {volume} - Volume Id {rootOfVolume}");
+
+        var scan = ScanFileDirectory.RecursiveScan($"/NARP/{narp}/".ToSpan(), narp.ToSpan());
+        dumpPhysical(scan, narp);
 
         Assimilate(scan, 0, null, rootOfVolume);
+    }
+
+    private static void dumpPhysical(FileNode scan, string narp)
+    {
+        var path = $"/ua/NeoVirtContentBaks/Physical-{narp}-{DateTime.Now.ToString("yyyy-MM-dd")}.json";
+           
+        string jsonString = JsonSerializer.Serialize(scan, options: new JsonSerializerOptions { 
+            WriteIndented=true,
+            NumberHandling=JsonNumberHandling.AllowReadingFromString,
+            DefaultIgnoreCondition=JsonIgnoreCondition.WhenWritingDefault});
+
+        File.WriteAllText(path, jsonString);
+
+        Console.WriteLine($"[Write Physical Dump: {path}]");
     }
 
     private static void Assimilate(FileNode scan, int level, NodeMark[] nodeStack, ObjectId rootOfVolume)
@@ -110,7 +288,7 @@ public partial class Program
         else
             newStack.AddRange(nodeStack);
 
-       
+
 
         var ind = "";
         for (var i = 0; i < level; i++)
@@ -127,7 +305,7 @@ public partial class Program
             var stackCopy = newStack.ToArray().ToList();
 
             stackCopy.Add(new NodeMark(m, level, newStack.ToArray(), rootOfVolume, db));
- 
+
             Assimilate(m, level + 1, stackCopy.ToArray(), rootOfVolume);
         }
     }

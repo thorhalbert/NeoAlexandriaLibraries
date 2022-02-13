@@ -54,7 +54,7 @@ namespace Tester
             //var startHash = "0f49f6c69d7cecf96ec362dac94745c6425c98ee"; // Hello world achieved 2021/02/09
             var startHash = "4146c29c78049b34c8b4196eb406743ce5f6eeec"; // Should be split across volumes (and is very big)- success
 
-             var f = new AssetFileSystem.File(startHash, NeoDb, bac);
+             var f = new AssetFileSystem.AssetFile(startHash, NeoDb, bac);
             
             var str = f.CreateReadStream();
 

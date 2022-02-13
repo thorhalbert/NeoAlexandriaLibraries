@@ -15,8 +15,8 @@ public partial class Program
 {
     public class NodeMark
     {
-        public IMongoCollection<NeoVirtFS> NeoVirtFSCol { get; }
-        public IMongoCollection<NeoVirtFS> NeoVirtFSDeletedCol { get; }
+        public IMongoCollection<NeoAssets.Mongo.NeoVirtFS> NeoVirtFSCol { get; }
+        public IMongoCollection<NeoAssets.Mongo.NeoVirtFS> NeoVirtFSDeletedCol { get; }
 
         private FileNode m;
         private int level;
@@ -39,10 +39,10 @@ public partial class Program
             this.m = m;
             this.level = level;
 
-            Name = m.Name.ToArray();
+            Name = m.Name;
             this.rootOfVolume = rootOfVolume;
 
-            var v = new NeoVirtFS
+            var v = new NeoAssets.Mongo.NeoVirtFS
             {
                 Name = Name
             };
@@ -95,7 +95,7 @@ public partial class Program
                     var sha1 = link.Substring(AssetTag.Length);
 
                     realPath.Add((byte) '/');
-                    realPath.AddRange(m.Name.ToArray());
+                    realPath.AddRange(m.Name);
 
                     var fileuuid = GuidUtility.Create(GuidUtility.UrlNamespace, realPath.ToArray());
 
@@ -122,7 +122,7 @@ public partial class Program
 
                     if (ass == null)
                     {
-                        Console.WriteLine($"Can't find the asset - {Encoding.UTF8.GetString(realPath.ToArray())} / {Encoding.UTF8.GetString(m.Name.ToArray())}");
+                        Console.WriteLine($"Can't find the asset - {Encoding.UTF8.GetString(realPath.ToArray())} / {Encoding.UTF8.GetString(m.Name)}");
 
                         v.Stat.st_size = 0;   // We could conceivably try to look on the Asset for this - restore will need to fix the stat
                         GenerateAssetFile(m, stack, rootOfVolume, v.Stat, sha1, realPath, true);
@@ -150,7 +150,7 @@ public partial class Program
                 {
                     // Just going to skip it for now - have to look at the different link types
                     // The one we probably want to handle is purgecontainer links
-                    Console.WriteLine($"Unknown link {link}");
+                    Console.WriteLine($"Unknown link {link} - {Encoding.UTF8.GetString(realPath.ToArray())} / {Encoding.UTF8.GetString(m.Name.ToArray())}");
                     return;
                 }
             }
@@ -170,7 +170,7 @@ public partial class Program
             }
             else
             {
-                Console.WriteLine($"Unknown File: {Encoding.UTF8.GetString(realPath.ToArray())} / {Encoding.UTF8.GetString(m.Name.ToArray())}");
+                Console.WriteLine($"Unknown File: {Encoding.UTF8.GetString(realPath.ToArray())} / {Encoding.UTF8.GetString(m.Name)}");
             }
         }
 
@@ -195,7 +195,7 @@ public partial class Program
                 return;
             }
 
-            var v = NeoVirtFS.CreateDirectory(parentId, rootOfVolume, m.Name.ToArray(), m.FileStat.st_mode);
+            var v = NeoAssets.Mongo.NeoVirtFS.CreateDirectory(parentId, rootOfVolume, m.Name, m.FileStat.st_mode);
             nodeId = v._id;
 
             if (v._id == parentId)
@@ -228,14 +228,14 @@ public partial class Program
             realPath.Add((byte) '/');
             realPath.AddRange(m.Name.ToArray());
 
-            var v = NeoVirtFS.CreateNewFile(parentId,
+            var v = NeoAssets.Mongo.NeoVirtFS.CreateNewFile(parentId,
                 rootOfVolume,
-                m.Name.ToArray(),
+                m.Name,
                 null,
                 m.FileStat.st_mode,
                 NeoVirtFSContent.PhysicalFilePath(realPath.ToArray()));
 
-            Console.WriteLine($"Create Physical File: {Encoding.UTF8.GetString(realPath.ToArray())}"); // Level={level} Parent={parentId} Id={v._id}");
+            //Console.WriteLine($"Create Physical File: {Encoding.UTF8.GetString(realPath.ToArray())}"); // Level={level} Parent={parentId} Id={v._id}");
 
             NeoVirtFSCol.InsertOne(v);
         }
@@ -257,12 +257,14 @@ public partial class Program
                 return;
             }
  
-            var v = NeoVirtFS.CreateNewFile(parentId,
+            var v = NeoAssets.Mongo.NeoVirtFS.CreateNewFile(parentId,
                 rootOfVolume,
-                m.Name.ToArray(),
+                m.Name,
                 null,
                 stat.st_mode.GetMode(),
                 NeoVirtFSContent.AnnealedAsset(Convert.FromHexString(sha1), lost));
+
+            v.Stat = stat;  // Fill in the rest of the stat
 
             if (lost)
                 v.DeleteType = DeleteTypes.LOST;
@@ -271,8 +273,9 @@ public partial class Program
             if (lost)
             {
                 lst = "[Lost] ";
-                Console.WriteLine($"{lst}Create Asset: {Encoding.UTF8.GetString(realPath.ToArray())} / {Encoding.UTF8.GetString(m.Name.ToArray())} SHA1={sha1}");
             }
+
+            //    Console.WriteLine($"{lst}Create Asset: {Encoding.UTF8.GetString(realPath.ToArray())} / {Encoding.UTF8.GetString(m.Name.ToArray())} SHA1={sha1}");
      
             // Create LOST assets into the deleted collection so it might be possible to ressurect if they later appear
 

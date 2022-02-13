@@ -2,7 +2,7 @@
 using NeoAssets.Mongo;
 using NeoBakedVolumes.Mongo;
 using Tmds.Linux;
-using static AssetFileSystem.File;
+using static AssetFileSystem.AssetFile;
 
 namespace NeoVirtFS
 {

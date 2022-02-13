@@ -8,6 +8,6 @@ namespace Linux_FuseFilesystem
     {
         public Guid? ExtFileHandle { get; set; }
         public string ExtAssetSha1 { get; set; }
-        public AssetFileSystem.File.UnbakeForFuse AssetLink { get; set; }
+        public AssetFileSystem.AssetFile.UnbakeForFuse AssetLink { get; set; }
     }
 }

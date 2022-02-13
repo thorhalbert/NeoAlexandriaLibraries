@@ -168,7 +168,7 @@ namespace Linux_FuseFilesystem
 
                 //Console.WriteLine($"AssetOpen({RawDirs.HR(path)})");
                 // "Open" the file -- mostly just setup
-                var assetLink = new AssetFileSystem.File.UnbakeForFuse(NeoMongo.NeoDb, bakedAssets, bakedVolumes, context.ExtAssetSha1);
+                var assetLink = new AssetFileSystem.AssetFile.UnbakeForFuse(NeoMongo.NeoDb, bakedAssets, bakedVolumes, context.ExtAssetSha1);
                 context.AssetLink = assetLink;  // Save in file context -- mostly needed by read
                 //Console.WriteLine($"Attach AssetLink to {fi.fh}");
 
