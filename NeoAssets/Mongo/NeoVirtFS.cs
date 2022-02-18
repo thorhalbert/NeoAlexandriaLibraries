@@ -13,6 +13,7 @@ using NeoCommon;
 using NeoBakedVolumes.Mongo;
 using static NeoAssets.Mongo.NeoVirtFS;
 using NeoVirtFS.Events;
+using SharpCompress.Compressors.Deflate;
 
 namespace NeoAssets.Mongo
 {
@@ -134,47 +135,58 @@ namespace NeoAssets.Mongo
                 return;
             }
 
-            var filter = Builders<NeoVirtFS>.Filter.Eq(x => x._id, id);
-            var node = vir.FindSync(filter).FirstOrDefault();
-            if (node == null) {
-                Console.WriteLine($"Can't find file node {id}");
-                var del = new byte[] { (byte) '.', (byte) 'o', (byte) 'l', (byte) 'd' };
+            try
+            {
 
-                if (p != null)
+                var filter = Builders<NeoVirtFS>.Filter.Eq(x => x._id, id);
+                var node = vir.FindSync(filter).FirstOrDefault();
+                if (node == null)
                 {
-                    Console.WriteLine($"Mark Redundant cache file as old: {p}");
-                    RenameFile(p, del);
+                    Console.WriteLine($"Can't find file node {id}");
+                    var del = new byte[] { (byte) '.', (byte) 'o', (byte) 'l', (byte) 'd' };
+
+                    if (p != null)
+                    {
+                        Console.WriteLine($"Mark Redundant cache file as old: {p}");
+                        RenameFile(p, del);
+                    }
+                    return;
                 }
-                return;
+
+                byte[] setSha1;
+                if (!node.DeepAnneal(db, p, assetDebug, out setSha1))
+                {
+                    Console.WriteLine($"Could not Anneal: {id} {p}");
+                    var eventRec = new Event_FileNeedsBaked
+                    {
+                        EventTime = DateTimeOffset.Now,
+                        ServerName = Environment.MachineName,
+                        VolumeId = node.VolumeId.ToString(),
+                        FileId = node._id.ToString(),
+                        AssetSha1 = setSha1
+                    };
+
+                    eventRec.SendMessage();
+                    Console.WriteLine("SendMessage called");
+                }
+                else
+                {
+                    var eventRec = new Event_FileAnnealed
+                    {
+                        EventTime = DateTimeOffset.Now,
+                        ServerName = Environment.MachineName,
+                        VolumeId = node.VolumeId.ToString(),
+                        FileId = node._id.ToString(),
+                        AssetSha1 = setSha1
+                    };
+
+                    eventRec.SendMessage();
+                }
             }
-
-            byte[] setSha1;
-            if (!node.DeepAnneal(db, p, assetDebug, out setSha1))
+            catch (ZlibException zx)
             {
-                Console.WriteLine($"Could not Anneal: {id} {p}");
-                var eventRec = new Event_FileNeedsBaked
-                {
-                    EventTime = DateTimeOffset.Now,
-                    ServerName = Environment.MachineName,
-                    VolumeId = node.VolumeId.ToString(),
-                    FileId = node._id.ToString(),
-                    AssetSha1 = setSha1
-                };
-
-                eventRec.SendMessage();
-                Console.WriteLine("SendMessage called");
-            }else
-            {
-                var eventRec = new Event_FileAnnealed
-                {
-                    EventTime = DateTimeOffset.Now,
-                    ServerName = Environment.MachineName,
-                    VolumeId = node.VolumeId.ToString(),
-                    FileId = node._id.ToString(),
-                    AssetSha1 = setSha1
-                };
-
-                eventRec.SendMessage();
+                Console.WriteLine($"UnbakeForFuse::ZlibException NeoVirtFS {zx.Message} {zx.StackTrace}");
+                
             }
         }
 
@@ -235,16 +247,18 @@ namespace NeoAssets.Mongo
 
             // Load up the namespaces -- there just shouldn't be too many of these
 
-            ProcessNamespaces(db, NamespaceNames, Namespaces, ref RootNameSpace, ref HaveRoot, updates);
+            var nCount = ProcessNamespaces(db, NamespaceNames, Namespaces, ref RootNameSpace, ref HaveRoot, updates);
             if (!HaveRoot)
                 throw new ApplicationException("Volume Namespaces don't define a Root - Setup Issue");
 
             // Now do volumes
 
+            int vCount = 0;
             var volumes = NeoVirtFSVolumesCol.FindSync(Builders<NeoVirtFSVolumes>.Filter.Empty).ToList();
             foreach (var v in volumes)
             {
-                Console.WriteLine($"Volume: {v.Name}");
+                //Console.WriteLine($"Volume: {v.Name}");
+                vCount++;
 
                 // Ensure that the filesystem nodes exist at the top level
 
@@ -262,6 +276,8 @@ namespace NeoAssets.Mongo
                 UpdateOneModel<NeoVirtFS> update = new UpdateOneModel<NeoAssets.Mongo.NeoVirtFS>(filter, upd) { IsUpsert = true };
                 updates.Add(update);
             }
+
+            Console.WriteLine($"[Loaded {nCount} Namespaces and {vCount} Volumes]");
 
             // Persist
 
@@ -441,7 +457,7 @@ namespace NeoAssets.Mongo
             return (retParent, paths.Last());
         }
 
-        private static void ProcessNamespaces(IMongoDatabase db,
+        private static int ProcessNamespaces(IMongoDatabase db,
             Dictionary<string, NeoVirtFSNamespaces> NamespaceNames,
             Dictionary<ObjectId, NeoVirtFSNamespaces> Namespaces,
             ref NeoVirtFSNamespaces RootNameSpace,
@@ -450,12 +466,15 @@ namespace NeoAssets.Mongo
         {
             var NeoVirtFSNamespacesCol = db.NeoVirtFSNamespaces();
             var names = NeoVirtFSNamespacesCol.FindSync(Builders<NeoVirtFSNamespaces>.Filter.Empty).ToList();
+
+            var nCount = 0;
             foreach (var n in names)
             {
                 NamespaceNames[n.NameSpace] = n;
                 Namespaces[n._id] = n;
 
-                Console.WriteLine($"Namespace: {n.NameSpace}");
+                //Console.WriteLine($"Namespace: {n.NameSpace}");
+                nCount++;
 
                 if (n.Root)
                 {
@@ -480,6 +499,8 @@ namespace NeoAssets.Mongo
                 UpdateOneModel<NeoVirtFS> update = new UpdateOneModel<NeoAssets.Mongo.NeoVirtFS>(filter, upd) { IsUpsert = true };
                 updates.Add(update);
             }
+
+            return nCount;
         }
 
         public byte[] GetStatPhysical()
@@ -630,24 +651,32 @@ namespace NeoAssets.Mongo
             using (var hasher = System.Security.Cryptography.SHA1.Create())
             {
                 var buffer = new Span<byte>(new byte[4096]);
-                int r = buffer.Length;
+                var r = buffer.Length;
 
                 ulong offset = 0;
 
-                while (r > 0)
+                try
                 {
-                    r = assetLink.Read(offset, buffer);
-                    if (r > 0)
+
+                    while (r > 0)
                     {
-                        offset += (ulong) r;
-                        var bf = buffer.ToArray();
-                        hasher.TransformBlock(bf, 0, (int) r, bf, 0);
+                        r = assetLink.Read(offset, buffer);
+                        if (r > 0)
+                        {
+                            offset += (ulong) r;
+                            var bf = buffer.ToArray();
+                            hasher.TransformBlock(bf, 0, (int) r, bf, 0);
+                        }
                     }
+
+                    hasher.TransformFinalBlock(buffer.ToArray(), 0, 0);
+
+                    catchHash = Convert.ToHexString(hasher.Hash).ToLowerInvariant();
+                }               
+                catch (ZlibException ex) {
+                    Console.WriteLine($"UnbakeForFuse::GetAssetHash {ex.Message}");
+                    return null;
                 }
-
-                hasher.TransformFinalBlock(buffer.ToArray(), 0, 0);
-
-                catchHash = Convert.ToHexString(hasher.Hash).ToLowerInvariant();
             }
 
             return catchHash;

@@ -12,9 +12,9 @@ namespace NeoCliFunctions;
 /// Only has to handle simple tar files from the baked engine
 /// Need to be able to detect if header is a header or not (for salvage)
 /// </summary>
-internal class TarHeader
+public class TarHeader
 {
-    enum FileTypes : byte
+    public enum FileTypes : byte
     {
         REGTYPE = (byte) '0',
         AREGTYPE = 0,
@@ -98,8 +98,8 @@ internal class TarHeader
     public ulong ChkSum { get; private set; }
     public FileTypes Type { get; private set; }
     public byte[] LinkName { get; private set; }
-    public byte[] Magic { get; private set; }
-    public byte[] Version { get; private set; }
+    public string Magic { get; private set; }
+    public ulong Version { get; private set; }
     public string UName { get; private set; }
     public string GName { get; private set; }
     public ulong DevMajor { get; private set; }
@@ -128,31 +128,48 @@ internal class TarHeader
 
         ActualChecksum = 0;
 
-        int idx = 0;
+        //            char name[100];               /*   0 */
+        //            char mode[8];                 /* 100 */
+        //            char uid[8];                  /* 108 */
+        //            char gid[8];                  /* 116 */
+        //            char size[12];                /* 124 */
+        //            char mtime[12];               /* 136 */
+        //            char chksum[8];               /* 148 */
+        //            char typeflag;                /* 156 */
+        //            char linkname[100];           /* 157 */
+        //            char magic[6];                /* 257 */
+        //            char version[2];              /* 263 */
+        //            char uname[32];               /* 265 */
+        //            char gname[32];               /* 297 */
+        //            char devmajor[8];             /* 329 */
+        //            char devminor[8];             /* 337 */
+        //            char prefix[155];             /* 345 */
 
-        Name = _nts(buf, ref idx, 100, ref valid);
+        Name = _nts(buf, 0, 100, ref valid);
 
-        Mode = _nti(buf, ref idx, 8, ref valid);
-        Uid = _nti(buf, ref idx, 8, ref valid);
-        Gid = _nti(buf, ref idx, 8, ref valid);
-        Size = _nti(buf, ref idx, 12, ref valid);
-        MTime = _nti(buf, ref idx, 12, ref valid);
+        Mode = _nti(buf, 100, 8, ref valid);
+        Uid = _nti(buf, 108, 8, ref valid);
+        Gid = _nti(buf, 116, 8, ref valid);
+        Size = _nti(buf, 124, 12, ref valid);
+        MTime = _nti(buf, 136, 12, ref valid);
 
-        ChkSum = _nti(buf, ref idx, 8, ref valid);
+        ChkSum = _nti(buf, 148, 8, ref valid);
 
-        var t = _ntb(buf, ref idx, 1);
+        var t = _ntb(buf, 156, 1);
         Type = (FileTypes) t[0];
 
-        LinkName = _nts(buf, ref idx, 100, ref valid);
-        Magic = _ntb(buf, ref idx, 6);
-        Version = _ntb(buf, ref idx, 2);
-        UName = _nta(buf, ref idx, 32, ref valid);
-        GName = _nta(buf, ref idx, 32, ref valid);
-        DevMajor = _nti(buf, ref idx, 8, ref valid);
-        DevMinor = _nti(buf, ref idx, 8, ref valid);
-        Prefix = _ntb(buf, ref idx, 155);
+        LinkName = _nts(buf, 157, 100, ref valid);
+        Magic = _nta(buf, 257, 6, ref valid);
+        Version = _nti(buf, 263, 2, ref valid);
+        UName = _nta(buf, 265, 32, ref valid);
+        GName = _nta(buf, 297, 32, ref valid);
+        DevMajor = _nti(buf, 329, 8, ref valid);
+        DevMinor = _nti(buf, 337, 8, ref valid);
+        Prefix = _ntb(buf, 356, 155);
 
         Valid = valid;
+
+        //Console.WriteLine($"Valid: {valid}");
 
         if (Valid)      // Don't spend time is already bad
         {
@@ -160,63 +177,87 @@ internal class TarHeader
             for (var i = 0; i < 512; i++)
                 ActualChecksum += buf[i];
 
+            var orgC = ActualChecksum;  
+
             // Subtract out the checksum block (it's supposed to be zero)
-            for (var i = 148; i < 148 + 8; i++)
-                ActualChecksum -= buf[i];
+            for (var i = 0; i < 8; i++)
+            {
+                //Console.WriteLine($"{148 + i}: {buf[148 + i]}");
+                ActualChecksum -= buf[148 + i];
+                ActualChecksum += 32;
+            }
 
             if (ActualChecksum != ChkSum)
                 Valid = false;
+
+            //Console.WriteLine($"CheckSums:  Org={orgC} Calc={ActualChecksum} Req={ChkSum}");
         }
     }
-
+    
     // Grab byte slice
-    private byte[] _ntb(byte[] buf, ref int idx, int v)
+    private byte[] _ntb(byte[] buf, int idx, int v)
     {
-        return buf[idx..(idx + v)];
+        var b = buf[idx..(idx + v)].ToList().ToArray();
+
+        return b;
     }
     // Convert octal bytes to integer
-    private ulong _nti(byte[] buf, ref int idx, int v, ref bool valid)
+    private ulong _nti(byte[] buf, int idx, int v, ref bool valid)
     {
-        var rBuf = _ntb(buf, ref idx, v);
+        var rBuf = _nts(buf, idx, v, ref valid);
 
         ulong acc = 0;
         foreach (var b in rBuf)
         {
             if (b == 0) break;
-            if (b < (byte) '0' || b > (byte) '7')
-            {
-                valid = false;
-                return acc;
-            }
+            //if (b < (byte) '0' || b > (byte) '7')
+            //{
+            //    Console.WriteLine($"Buf: {Encoding.ASCII.GetString(rBuf)}");
+            //    valid = false;
+            //    return acc;
+            //}
 
             acc <<= 3;   // *8
-            acc += acc - (byte) '0';
+            var o = b & 7;
+            acc += (ulong) o;
         }
         return acc;
     }
 
     // Convert to byte string
-    private byte[] _nts(byte[] buf, ref int idx, int v, ref bool valid)
+    private byte[] _ntss(byte[] buf, int idx, int v, ref bool valid)
     {
-        var rBuf = _ntb(buf, ref idx, v);
+        var rBuf = _ntb(buf, idx, v);
 
         for (var i = 0; i < rBuf.Length; i++)
-            if (rBuf[i] == 0) return buf[..i];
+            if (rBuf[i] == 0) return rBuf[..i];
 
         return rBuf;   // For now they're already all null terminated
     }
 
-    // Convert to a string (assuming it's ascii-ish)
-    private string _nta(byte[] buf, ref int idx, int v, ref bool valid)
+    byte[] _nts(byte[] buf, int idx, int v, ref bool valid)
     {
-        var rBuf = _nts(buf, ref idx, v, ref valid);
+        var ki = idx;
+        var byt = _ntss(buf, idx, v, ref valid);
+
+        //var str = Encoding.ASCII.GetString(byt);
+        //Console.WriteLine($"{ki}: {str}\t\t({v})");
+
+        return byt;
+    }
+
+    // Convert to a string (assuming it's ascii-ish)
+    private string _nta(byte[] buf, int idx, int v, ref bool valid)
+    {
+        var rBuf = _nts(buf, idx, v, ref valid);
         try
         {
             return Encoding.ASCII.GetString(rBuf);
         }
-        catch
+        catch (Exception ex)
         {
-            valid = false;
+            //Console.WriteLine($"{idx}/{v} - decode error - {ex.Message}");
+            //valid = false;
             return String.Empty;
         }
     }
@@ -229,9 +270,10 @@ internal class TarHeader
 
         sb.AppendLine($"File: {File}, Block: {FileBlock}, Run: {RunBlock} Valid: {Valid}");
         sb.AppendLine($"Name: {Encoding.UTF8.GetString(Name)}");
-        sb.AppendLine($"Mode: {mode.ModMask()}/Type: {Type.ToString()}");
+        sb.AppendLine($"Mode: {mode.ModMask()}/Type: {Type}");
         sb.AppendLine($"Uid: {Uid}/{UName}, Gid: {Gid}/{GName}");
-        sb.AppendLine($"Size: {Size}, Mod: {DateTimeOffset.FromUnixTimeSeconds((long) MTime)}");
+        sb.AppendLine($"Size: {Size}, Mod: {DateTimeOffset.FromUnixTimeSeconds((long) MTime).ToString("R")}");
+        //sb.AppendLine($"Size: {Size}, Mod: {MTime}");
 
         return sb.ToString();
     }

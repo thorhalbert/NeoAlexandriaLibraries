@@ -52,7 +52,7 @@ namespace NeoVirtFS
 
         public int Open(ReadOnlySpan<byte> path, int flags)
         {
-            Console.WriteLine($"[Open: {path.GetString()} Flags={flags}");
+            //Console.WriteLine($"[Open: {path.GetString()} Flags={flags}]");
 
             var iot = LibC.open(toBp(path), flags);
             if (iot < 0)
@@ -63,7 +63,7 @@ namespace NeoVirtFS
 
         public int Create(ReadOnlySpan<byte> path, mode_t mode, int flags)
         {
-            Console.WriteLine($"[Create: {path.GetString()} Mode={mode} Flags={flags}");
+            Console.WriteLine($"[Create: {path.GetString()} Mode={mode} Flags={flags}]");
             var iot = LibC.open(toBp(path), flags, mode);
             if (iot < 0)
                 return -LibC.errno;

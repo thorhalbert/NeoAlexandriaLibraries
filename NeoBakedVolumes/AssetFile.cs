@@ -62,8 +62,6 @@ namespace AssetFileSystem
 
             unBaker = new UnbakeContext(db, volRec, baRec);
 
-
-
             //var channel = GrpcChannel.ForAddress("http://feanor:5000");
             //assetClient = new BakedVolumeData.BakedVolumeDataClient(channel);
         }
@@ -112,11 +110,11 @@ namespace AssetFileSystem
             //return new ICSharpCode.SharpZipLib.GZip.GZipInputStream(new MakeStream(baRec, volRec, this)); - this actually doesn't work
             var innerStream = new MakeStream(baRec, volRec, this);
 
-            //return new System.IO.Compression.GZipStream(innerStream, System.IO.Compression.CompressionMode.Decompress);  // This seems to work too
+            return new System.IO.Compression.GZipStream(innerStream, System.IO.Compression.CompressionMode.Decompress);  // This seems to work too
             //return SharpCompress.Readers.GZip.GZipReader.Open(innerStream).OpenEntryStream();
-            return new SharpCompress.Compressors.Deflate.GZipStream(innerStream, SharpCompress.Compressors.CompressionMode.Decompress);
+            //return new SharpCompress.Compressors.Deflate.GZipStream(innerStream, SharpCompress.Compressors.CompressionMode.Decompress);
 
-            Console.WriteLine("Using SharpCompress.Readers.GZip.GZipReader.Open");
+            //Console.WriteLine("Using SharpCompress.Readers.GZip.GZipReader.Open");
         }
 
         private class MakeStream : Stream
@@ -172,8 +170,8 @@ namespace AssetFileSystem
 
                 // split buffer and build a prevbuffer - for next time
 
-                var retBuf = val.Slice(0, count);
-                prevBuffer = val.Slice(count);
+                var retBuf = val[..count];
+                prevBuffer = val[count..];
 
                 Array.Copy(retBuf.ToArray(), buffer, count);
 

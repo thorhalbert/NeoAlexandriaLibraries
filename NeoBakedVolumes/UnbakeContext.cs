@@ -21,7 +21,7 @@ namespace AssetFileSystem
 
             public ulong volumelength { get; private set; }
             public uint block { get; private set; }
-            public uint address { get; private set; }
+            public ulong address { get; private set; }
             public int FileNum { get; private set; }
             public ulong offsetx { get; private set; }
             public ulong remain { get; private set; }
@@ -38,17 +38,53 @@ namespace AssetFileSystem
                 this.volRec = volRec;
                 this.baRec = baRec;
 
+                //Console.WriteLine($"UnbakeContext: {volRec._id} file={baRec.Part} Offset={baRec.Offset}/Block={baRec.Block}");
+
                 volumelength = volRec.ArchSize / volRec.NumParts;
+
+                //Console.WriteLine($"Unbake Open: Length={volumelength} Arch={volRec.ArchSize} Parts={volRec.NumParts}");
 
                 // Read starting settings
 
-                block = baRec.Block + 1;
-                address = block << 9;
+                //block = baRec.Block + 1;        // Block is pointer to tar directory entry (+1 is our content)
+                //address = block << 9;
 
-                FileNum = Convert.ToInt32(address / volumelength);
+                //FileNum = Convert.ToInt32(address / volumelength);
 
-                offsetx = address % volumelength;
-                remain = volumelength - offsetx;
+                //offsetx = address % volumelength;
+                //remain = volumelength - offsetx;
+
+              
+                // Check block
+
+                var checkFileNum = baRec.Part[0] - (byte) 'A';
+
+                //var newBlock = baRec.Offset + ((ulong) checkFileNum * volumelength);
+                //newBlock >>= 9;
+
+                //if (baRec.Block != newBlock)
+                //    Console.WriteLine($"File Block: {baRec.Block} != Computed: {newBlock}");
+
+                // Alternate check computation
+             
+                var checkOffset = baRec.Offset + 512;
+                var checkRemain = volumelength - checkOffset;
+
+                FileNum = checkFileNum;
+                offsetx = checkOffset;
+                remain = checkRemain;
+
+                //if (FileNum != checkFileNum ||
+                //    offsetx != checkOffset ||
+                //    remain != checkRemain)
+                //{
+                //    Console.WriteLine($"Unbake Open: Org Offset={offsetx}, Remain={remain} File={FileNum}");
+                //    Console.WriteLine($"Unbake Open: Tst Offset={checkOffset}, Remain={checkRemain} File={checkFileNum} - override");
+
+                //    FileNum = checkFileNum;
+                //    offsetx = checkOffset;
+                //    remain = checkRemain;
+                //}
 
                 // File Info (meaning the file we're pullout out)
 
@@ -68,97 +104,97 @@ namespace AssetFileSystem
                 //bytesRead = 0;
             }
 
-            public ReadOnlyMemory<byte> ReadNextBlockWithGRPC(uint size = 0)
-            {
-                var defaultMethodConfig = new MethodConfig
-                {
-                    Names = { MethodName.Default },
-                    RetryPolicy = new RetryPolicy
-                    {
-                        MaxAttempts = 16,
-                        InitialBackoff = TimeSpan.FromSeconds(1),
-                        MaxBackoff = TimeSpan.FromSeconds(5),
-                        BackoffMultiplier = 1.5,
-                        RetryableStatusCodes = { StatusCode.Unavailable }
-                    }
-                };
+            //public ReadOnlyMemory<byte> ReadNextBlockWithGRPC(uint size = 0)
+            //{
+            //    var defaultMethodConfig = new MethodConfig
+            //    {
+            //        Names = { MethodName.Default },
+            //        RetryPolicy = new RetryPolicy
+            //        {
+            //            MaxAttempts = 16,
+            //            InitialBackoff = TimeSpan.FromSeconds(1),
+            //            MaxBackoff = TimeSpan.FromSeconds(5),
+            //            BackoffMultiplier = 1.5,
+            //            RetryableStatusCodes = { StatusCode.Unavailable }
+            //        }
+            //    };
 
-                // Figure out what system our primary connector is on
-                var channel = GrpcChannel.ForAddress("http://feanor:5000",
-                                    new GrpcChannelOptions
-                                    {
-                                        MaxReceiveMessageSize = null, // 5 MB
-                                        MaxSendMessageSize = null, // 2 MB
-                                        //HttpHandler = new System.Net.Http.SocketsHttpHandler
-                                        //{
-                                        //    EnableMultipleHttp2Connections = true,
-                                        //}
-                                        ServiceConfig = new ServiceConfig { MethodConfigs = { defaultMethodConfig } }
-                                    });
-                assetClient = new BakedVolumeData.BakedVolumeDataClient(channel);
+            //    // Figure out what system our primary connector is on
+            //    var channel = GrpcChannel.ForAddress("http://feanor:5000",
+            //                        new GrpcChannelOptions
+            //                        {
+            //                            MaxReceiveMessageSize = null, // 5 MB
+            //                            MaxSendMessageSize = null, // 2 MB
+            //                            //HttpHandler = new System.Net.Http.SocketsHttpHandler
+            //                            //{
+            //                            //    EnableMultipleHttp2Connections = true,
+            //                            //}
+            //                            ServiceConfig = new ServiceConfig { MethodConfigs = { defaultMethodConfig } }
+            //                        });
+            //    assetClient = new BakedVolumeData.BakedVolumeDataClient(channel);
 
-                if (fileRemain < 1)
-                    return new ReadOnlyMemory<byte>(); //EOF
+            //    if (fileRemain < 1)
+            //        return new ReadOnlyMemory<byte>(); //EOF
 
-                if (size < 1)
-                    size = BUFFSIZE;
+            //    if (size < 1)
+            //        size = BUFFSIZE;
 
-                if (FileNum != currentFileNum)
-                {
-                    // Close the old file, which we don't really have to do -- the service cache does that
+            //    if (FileNum != currentFileNum)
+            //    {
+            //        // Close the old file, which we don't really have to do -- the service cache does that
 
-                    // Open the new, which again the service does, we just need to say what
-                    currentFileNum = FileNum;
-                    currentPart = Convert.ToChar(currentFileNum + 65).ToString();  // File 0=A
-                }
+            //        // Open the new, which again the service does, we just need to say what
+            //        currentFileNum = FileNum;
+            //        currentPart = Convert.ToChar(currentFileNum + 65).ToString();  // File 0=A
+            //    }
 
-                if (size > fileRemain)
-                    size = (uint) fileRemain;
+            //    if (size > fileRemain)
+            //        size = (uint) fileRemain;
 
-                // These files are guaranteed to be under 32 bits in length
-                var returnVal = assetClient.Fetch(new FetchRequest()
-                {
-                    BakedVolume = volRec._id,
-                    Part = currentPart,
-                    Offset = (int) offsetx,
-                    RequestCount = (int) size,
-                });
+            //    // These files are guaranteed to be under 32 bits in length
+            //    var returnVal = assetClient.Fetch(new FetchRequest()
+            //    {
+            //        BakedVolume = volRec._id,
+            //        Part = currentPart,
+            //        Offset = (int) offsetx,
+            //        RequestCount = (int) size,
+            //    });
 
-                var length = returnVal.Length;
-                fileRead += (ulong) length;
+            //    var length = returnVal.Length;
+            //    fileRead += (ulong) length;
 
-                //var dump = Utils.HexDump(returnVal.Payload.ToByteArray());
-                //Console.WriteLine(dump);
+            //    //var dump = Utils.HexDump(returnVal.Payload.ToByteArray());
+            //    //Console.WriteLine(dump);
 
-                //Console.WriteLine($"Read: Part {currentFileNum}, Length {length} Read {fileRead} Remain {currentPartRemain} ");
+            //    //Console.WriteLine($"Read: Part {currentFileNum}, Length {length} Read {fileRead} Remain {currentPartRemain} ");
 
-                //using(var f = new BinaryWriter(System.IO.File.OpenWrite("test.gz")))
-                //{
-                //    f.Write(returnVal.Payload.ToByteArray());
-                //}
+            //    //using(var f = new BinaryWriter(System.IO.File.OpenWrite("test.gz")))
+            //    //{
+            //    //    f.Write(returnVal.Payload.ToByteArray());
+            //    //}
 
-                // Set variables for next time
+            //    // Set variables for next time
 
 
-                fileRemain -= (ulong) length;
-                offsetx += (ulong) length;
+            //    fileRemain -= (ulong) length;
+            //    offsetx += (ulong) length;
 
-                currentPartRemain -= (ulong) length;
+            //    currentPartRemain -= (ulong) length;
 
-                // See if we're spanning parts
-                if (currentPartRemain < 1)
-                {
-                    FileNum++;
+            //    // See if we're spanning parts
+            //    if (currentPartRemain < 1)
+            //    {
+            //        FileNum++;
 
-                    Console.WriteLine($"[Proceed to next file {FileNum}]");
+            //        Console.WriteLine($"[Proceed to next file {FileNum}]");
 
-                    offsetx = 0;   // Start at beginning of next file
+            //        offsetx = 0;   // Start at beginning of next file
 
-                    currentPartRemain = Math.Min(volumelength, realLength - fileRead);
-                }
+            //        currentPartRemain = Math.Min(volumelength, realLength - fileRead);
+            //    }
 
-                return returnVal.Payload.Memory.Slice(0, length);
-            }
+            //    return returnVal.Payload.Memory.Slice(0, length);
+            //}
 
             Memory<byte> mainBuff = new Memory<byte>(new byte[0]);
 
@@ -181,6 +217,7 @@ namespace AssetFileSystem
                     // Open the new, which again the service does, we just need to say what
                     currentFileNum = FileNum;
                     currentPart = Convert.ToChar(currentFileNum + 65).ToString();  // File 0=A
+                    //Console.WriteLine($"Unbake: Switch to file {currentPart}");
                 }
 
                 if (size > fileRemain)
@@ -199,6 +236,8 @@ namespace AssetFileSystem
                 //    RequestCount = (int) size,
                 //});
 
+                //Console.WriteLine($"UnBake: Seek {offsetx} on file {currentPart}");
+
                 _VolumeStream.Seek((long) offsetx, SeekOrigin.Begin);
 
                 var readLength = _VolumeStream.Read(mainBuff.Span);
@@ -209,7 +248,7 @@ namespace AssetFileSystem
                 //var dump = Utils.HexDump(returnVal.Payload.ToByteArray());
                 //Console.WriteLine(dump);
 
-                Console.WriteLine($"Read: Part {currentFileNum}, Length {length} Read {fileRead} Remain {currentPartRemain} ");
+                //Console.WriteLine($"Read: Part {currentFileNum}, Length {length} Read {fileRead} Remain {currentPartRemain} ");
 
                 //using(var f = new BinaryWriter(System.IO.File.OpenWrite("test.gz")))
                 //{
@@ -297,7 +336,7 @@ namespace AssetFileSystem
                     throw new Exception( $"Error Opening file - {fName} for {volume}/{part}",ex);
                 }
 
-                Console.WriteLine($"[Open Volume: {fName}]");
+                //Console.WriteLine($"[Open Volume: {fName}]");
                 _VolumeFile = vf;
             }
         }

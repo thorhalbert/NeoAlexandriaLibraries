@@ -4,6 +4,8 @@ using System;
 using System.IO;
 using System.Text;
 using System.Security.Cryptography;
+using SharpCompress.Compressors.Deflate;
+using NeoBakedVolumes;
 
 namespace AssetFileSystem
 {
@@ -126,7 +128,7 @@ namespace AssetFileSystem
                             // Console.WriteLine("Load a buffer");
                             // Load in some buffer if we don't already have it - copy what's left of bigremaining to bigMemory and add to end
 
-                            var readBuffer = bigMemory.Slice(bigRemaining.Length);
+                            var readBuffer = bigMemory[bigRemaining.Length..];
                             bigRemaining.CopyTo(bigMemory);
                             var bufferBytes = assetStream.Read(readBuffer.Span);
 
@@ -225,13 +227,60 @@ namespace AssetFileSystem
                 catch (InvalidDataException ide)
                 {
                     Console.WriteLine($"UnbakeForFuse::Read Gzip decompression issue - {ide.Message} Id {assetId} - offset {offset}");
+                    markError();
                     return -1;
+                }
+                catch (ZlibException zx)
+                {
+                    Console.WriteLine($"UnbakeForFuse::ZlibException - {zx.Message}");
+                    markError();
+                    return -1; // Needs to go up
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"UnbakeForFuse::Read Error ({ex.GetType().Name}) - {ex.Message} {ex.StackTrace}");
                     return -1;
                 }
+            }
+
+            private void markError()
+            {
+                bakedVolumes = db.BakedVolumes();
+                bakedAssets = db.BakedAssets();
+
+                var vMulti = Builders<BakedVolumes>.Update
+                    .Set(u => u.ErrorDecompressing, true);
+
+                var vFilter = Builders<BakedVolumes>.Filter.Eq(x => x._id, file.volRec._id);
+
+                bakedVolumes.UpdateOne(vFilter, vMulti);
+
+                var bMulti = Builders<BakedAssets>.Update
+                  .Set(u => u.ErrorDecompressing, true);
+
+                var bFilter = Builders<BakedAssets>.Filter.Eq(x => x._id, file.baRec._id);
+
+                bakedAssets.UpdateOne(bFilter, bMulti);
+
+                Console.WriteLine($"Mark Volume In Trouble: {file.volRec._id}, {file.baRec._id}");
+
+                var err = new VolumeAssetDecodeError(file.volRec._id, file.baRec._id);
+                err.SendMessage();
+            }
+
+            public class VolumeAssetDecodeError : NeoErrors
+            {
+                public string Volume { get; set; }
+                public string AssetSha1 { get; set; }
+
+                public VolumeAssetDecodeError(string volume, string assetsha1) : base()
+                {                   
+                    MessageType = "VolumeAssetDecodeError";
+
+                    Volume = volume;
+                    AssetSha1 = assetsha1;
+                }
+
             }
 
             /// <summary>

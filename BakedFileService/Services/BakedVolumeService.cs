@@ -120,7 +120,7 @@ namespace BakedFileService
 
                 logger = _logger;
 
-                Console.WriteLine($"[Setup cache for {Volume}/{Part}]");
+                //Console.WriteLine($"[Setup cache for {Volume}/{Part}]");
             }
 
             public FetchPayload OpenStream()
@@ -159,7 +159,7 @@ namespace BakedFileService
                     return retRec;
                 }
 
-                Console.WriteLine($"[Open Volume: {fName}]");
+                //Console.WriteLine($"[Open Volume: {fName}]");
 
                 return retRec;
             }

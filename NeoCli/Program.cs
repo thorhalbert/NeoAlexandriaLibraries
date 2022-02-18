@@ -288,8 +288,6 @@ public partial class Program
         else
             newStack.AddRange(nodeStack);
 
-
-
         var ind = "";
         for (var i = 0; i < level; i++)
             ind += "    ";
@@ -300,14 +298,15 @@ public partial class Program
         //Console.WriteLine($"Node: {nodeList}");
 
         // Console.WriteLine($"{ind}{scan.Name.GetString()} {info(scan)}");
-        foreach (var m in scan.Members)
-        {
-            var stackCopy = newStack.ToArray().ToList();
+        if (scan.Members != null)
+            foreach (var m in scan.Members)
+            {
+                var stackCopy = newStack.ToArray().ToList();
 
-            stackCopy.Add(new NodeMark(m, level, newStack.ToArray(), rootOfVolume, db));
+                stackCopy.Add(new NodeMark(m, level, newStack.ToArray(), rootOfVolume, db));
 
-            Assimilate(m, level + 1, stackCopy.ToArray(), rootOfVolume);
-        }
+                Assimilate(m, level + 1, stackCopy.ToArray(), rootOfVolume);
+            }
     }
 
     private static string info(FileNode scan)

@@ -34,6 +34,7 @@ namespace NeoBakedVolumes.Mongo
         [BsonIgnoreIfNull] public double? RepairLevel { get; set; } // 476/47598
         [BsonIgnoreIfNull] public bool? Repairable { get; set; }    // 70/47598
         [BsonIgnoreIfNull] public BakedVolumes_RepairStatuses RepairStatus { get; set; }  // 60/47598
+        [BsonIgnoreIfNull] public bool ErrorDecompressing { get; set; }
 
         [BsonExtraElements] public BsonDocument _CatchAll { get; set; }
     }

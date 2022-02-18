@@ -98,9 +98,18 @@ public partial class Program
                     realPath.AddRange(m.Name);
 
                     var fileuuid = GuidUtility.Create(GuidUtility.UrlNamespace, realPath.ToArray());
-
-                    var theFilter = Builders<AssetFiles>.Filter.Eq("_id", fileuuid);
-                    var baRec = af.FindSync(theFilter).FirstOrDefault();
+                
+                    AssetFiles? baRec = null;
+                    try
+                    {
+                        var theFilter = Builders<AssetFiles>.Filter.Eq("_id", fileuuid);
+                        baRec = af.FindSync(theFilter).FirstOrDefault();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Bad assetfile {ex.Message} {Encoding.UTF8.GetString(realPath.ToArray())} - id {fileuuid}");
+                        baRec = null;
+                    }
                     if (baRec == null)
                     {
                         Console.WriteLine($"Can't find assetfile {Encoding.UTF8.GetString(realPath.ToArray())} - using file defaults");

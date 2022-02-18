@@ -371,7 +371,7 @@ namespace NeoVirtFS
         }
         public override int Flush(ReadOnlySpan<byte> path, ref FuseFileInfo fi)
         {
-            if (verbosity > 0)
+            if (verbosity > 5)
                 Console.WriteLine($"Flush {path.GetString()}");
 
             int error = 0, level = 0;
@@ -757,7 +757,7 @@ namespace NeoVirtFS
 
         public override int ListXAttr(ReadOnlySpan<byte> path, Span<byte> list)
         {
-            if (verbosity > 0)
+            if (verbosity > 5)
                 Console.WriteLine($"ListXAttr {path.GetString()}");
 
             int error = 0, level = 0;

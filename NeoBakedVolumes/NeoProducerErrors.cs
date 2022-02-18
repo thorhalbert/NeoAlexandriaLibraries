@@ -13,7 +13,7 @@ using System.Text.Json.Serialization;
 /// These are the kafka/redpanda event messages that filesystem activities will generate
 /// This might also include the marshall/send infrastructure
 /// </summary>
-namespace NeoVirtFS.Events;
+namespace NeoBakedVolumes;
 
 // New File Closed
 // Directory created
@@ -27,23 +27,24 @@ namespace NeoVirtFS.Events;
 // Scry Changed (or possibily new)
 // Error
 
-public abstract class FileActivityBase
+public abstract class NeoErrors
 {
-    public FileActivityBase()
+    public NeoErrors()
     {
         MessageType = "NONE";
-        AssetSha1 = Array.Empty<byte>();
+        ErrorTime = DateTimeOffset.Now;
+        Machine = Environment.MachineName;
+        User = Environment.UserName;
     }
 
-    public string MessageType { get; set; }
+    public string MessageType { get; protected set; }
+    public DateTimeOffset ErrorTime { get; protected set; }
+    public string Machine {get; protected set;}
+    public string User { get; set; }
 
-    public string VolumeId { get; set; }
-    public string FileId { get; set; }
-    public DateTimeOffset EventTime { get; set; }
-    public string ServerName { get; set; }
-    public Byte[] AssetSha1 { get; set; }
+    public const string ErrorTopic = "neoerrors";
 
-    public void SendMessage()
+    public void SendMessage(bool noFlush = false)
     {
         try
         {
@@ -51,23 +52,25 @@ public abstract class FileActivityBase
             var config = new ProducerConfig
             {
                 BootstrapServers = bootstrap,
-                ClientId = $"{Dns.GetHostName()}_NeoVirtFS",
+                ClientId = $"{Environment.MachineName}_NeoVirtFS",
             };
 
             using (var producer = new ProducerBuilder<string, string>(config).Build())
             {
                 // We'll have to add schema control (and supposedly have to use newtonsoftjson since it can't handle these for schemas)
 
-                string jsonString = JsonSerializer.Serialize(this, options: new JsonSerializerOptions
+                var jsonString = JsonSerializer.Serialize(this, options: new JsonSerializerOptions
                 {
                     WriteIndented = true,
                     NumberHandling = JsonNumberHandling.AllowReadingFromString,
                     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault
                 });
 
-                producer.Produce("neofiles", new Message<string, string> { Key = MessageType, Value = jsonString });
-                Console.WriteLine($"Send message {jsonString}");
-                producer.Flush();
+                producer.Produce(ErrorTopic, new Message<string, string> { Key = MessageType, Value = jsonString });
+                Console.WriteLine($"Send message: {jsonString}");
+
+                if (noFlush)
+                    producer.Flush();
             }
         }
         catch (Exception ex)
@@ -77,17 +80,3 @@ public abstract class FileActivityBase
     }
 }
 
-public class Event_FileAnnealed : FileActivityBase
-{
-    public Event_FileAnnealed()
-    {
-        MessageType = "Event_FileAnnealed";
-    }
-}
-public class Event_FileNeedsBaked : FileActivityBase
-{
-    public Event_FileNeedsBaked()
-    {
-        MessageType = "Event_FileNeedsBaked";
-    }
-}

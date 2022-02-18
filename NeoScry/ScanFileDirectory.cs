@@ -38,6 +38,8 @@ namespace NeoScry
                 contents.Add(d.d_name.AsMemory<byte>());                             
             }
 
+            Console.WriteLine($"[Load {path.GetString()} ({contents.Count} entries)]");
+
             RawDirs.closedir(dirFd);
 
             return contents;
@@ -51,31 +53,38 @@ namespace NeoScry
             fn.Load(startingPath, name);
             if (!fn.IsDir) return fn;   // We've done our duty 
 
+            // Can't enumerate this since we have to sort it
+
             var files = Scan(startingPath);
 
             // Sort it
             var cmp = new ByteMemoryComp();
             files.Sort(comparer: cmp);
 
+            fn.Members = iterateMembers(files, startingPath.ToArray(), recurseGuard);
+
+            return fn;
+        }
+
+        private static IEnumerable<FileNode> iterateMembers(List<ReadOnlyMemory<byte>> files, byte[] startingPath, int recurseGuard)
+        {
             // Assimilate the children
             foreach (var f in files)
             {
                 if (f.Span.SequenceEqual(dot)) continue;
                 if (f.Span.SequenceEqual(dotdot)) continue;
 
-                if (SequenceStartsWith(f,archive)) continue;
+                if (SequenceStartsWith(f, archive)) continue;
 
                 // This surely sucks - got to be better ways to do this. -- Need bytebuilder
-                var newPath = startingPath.ToArray().Concat(pathSep.ToArray()).Concat(f.ToArray()).ToArray();
+                var newPath = startingPath.Concat(pathSep.ToArray()).Concat(f.ToArray()).ToArray();
 
                 //Console.WriteLine($"See {newPath.GetString()}");
 
-                var newNode = RecursiveScan(newPath, f.Span, recurseGuard+1);
+                var newNode = RecursiveScan(newPath, f.Span, recurseGuard + 1);
 
-                fn.Members.Add(newNode);
+                yield return newNode;
             }
-
-            return fn;
         }
 
         private static bool SequenceStartsWith(ReadOnlyMemory<byte> f, byte[] cmp)
@@ -142,14 +151,13 @@ namespace NeoScry
     {
         private stat fileStat;
 
-        //public ReadOnlyMemory<byte> PhysicalPath { get; internal set; }
         public byte[] Name { get; internal set; }
         public string Name_HR { get; internal set; }
         public stat FileStat { get => fileStat; internal set => fileStat = value; }
         public byte[] SymbolicLink { get; internal set; }
         public string SymbolicLink_HR { get; internal set; }
 
-        public List<FileNode> Members { get; } = new List<FileNode>();
+        public IEnumerable<FileNode> Members { get; internal set; } 
 
         //public byte[] AssetSHA1 { get; set; }
 

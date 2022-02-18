@@ -1,6 +1,7 @@
 ﻿using MongoDB.Driver;
 using NeoAssets.Mongo;
 using NeoBakedVolumes.Mongo;
+using SharpCompress.Compressors.Deflate;
 using Tmds.Linux;
 using static AssetFileSystem.AssetFile;
 
@@ -43,7 +44,7 @@ namespace NeoVirtFS
             try
             {
                 var sha1 = Convert.ToHexString(file.Content.AssetSHA1).ToLowerInvariant();
-                Console.WriteLine($"Open Asset {sha1}");
+                //Console.WriteLine($"Open Asset {sha1}");
 
                 asset = new UnbakeForFuse(db, bac, bVol, sha1);
                 return 0;
@@ -65,23 +66,31 @@ namespace NeoVirtFS
 
             //Console.WriteLine($"READ: Off={offset} Len={buffer.Length}");
 
-            var count = 0;
-         
-            while (count < buffer.Length)
-            {             
-                var left = buffer.Length - count;
+            try
+            {
+                var count = 0;
 
-                var newCount = asset.Read(offset, buffer.Slice(count, left));
-             
-                offset += (ulong) newCount;
-                count += newCount;
+                while (count < buffer.Length)
+                {
+                    var left = buffer.Length - count;
 
-                //Console.WriteLine($"Count={count} Last Return {newCount}");
+                    var newCount = asset.Read(offset, buffer.Slice(count, left));
 
-                if (newCount < 1) return count;  // EOF 
+                    offset += (ulong) newCount;
+                    count += newCount;
+
+                    //Console.WriteLine($"Count={count} Last Return {newCount}");
+
+                    if (newCount < 1) return count;  // EOF 
+                }
+
+                return count;
             }
-
-            return count;
+            catch (ZlibException ex)
+            {
+                Console.WriteLine($"ZlibException: Decompress Error: {ex.Message}");
+                return 0;
+            }
         }
 
         public int Release(FileDescriptor fds)

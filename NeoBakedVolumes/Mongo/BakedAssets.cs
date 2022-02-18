@@ -28,6 +28,7 @@ namespace NeoBakedVolumes.Mongo
         [BsonRequired] public string Volume { get; set; }   // 400000/400000
         [BsonIgnoreIfNull] public double? CTime { get; set; }   // 338138/400000
         [BsonIgnoreIfNull] public List<string> Owners { get; set; } // 8/400000
+        [BsonIgnoreIfNull] public bool ErrorDecompressing { get; set; }
 
         [BsonExtraElements] public BsonDocument _CatchAll { get; set; }
     }
