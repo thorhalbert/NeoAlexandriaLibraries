@@ -1006,9 +1006,13 @@ namespace NeoAssets.Mongo
         {
             stat.st_nlink = 1;
 
+            stat.st_ino = 1;
+
             stat.st_size = Convert.ToInt64(st_size);
             stat.st_blksize = 4096;
-            stat.st_blocks = (blkcnt_t) (long) (stat.st_size << 12);
+
+            stat.st_blocks = (blkcnt_t) (long) (stat.st_size >> 9);
+            if (st_size % 512 > 0) stat.st_blocks += 1;
 
             stat.st_uid = st_uid;
             stat.st_gid = st_gid;
@@ -1024,9 +1028,13 @@ namespace NeoAssets.Mongo
         {
             stat.st_nlink = 1;
 
+            stat.st_ino = 1;
+
             stat.st_size = Convert.ToInt64(inStats.st_size);
-            stat.st_blksize = inStats.st_blksize;
-            stat.st_blocks = inStats.st_blocks;
+            stat.st_blksize = 4096;
+
+            stat.st_blocks = (blkcnt_t) (long) (stat.st_size >> 9);
+            if (st_size % 512 > 0) stat.st_blocks += 1;
 
             stat.st_uid = st_uid;
             stat.st_gid = st_gid;

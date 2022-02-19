@@ -90,9 +90,9 @@ namespace AssetFileSystem
             {
                 try
                 {
-                    if (atEof) return 0;
+                    if (Debug) Console.WriteLine($"UnbakeForFuse::Read(Offset={offset}, Length={buffer.Length} Current={CurrentPosition})");
 
-                    if (Debug) Console.WriteLine($"UnbakeForFuse::Read(Offset={offset}, Length={buffer.Length})");
+                    //if (atEof) return 0;
 
                     // Implement offset as if we are seekable
                     // Compute a forward gap and eat those bytes as we read forward

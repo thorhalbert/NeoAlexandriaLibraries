@@ -26,19 +26,27 @@ namespace NeoScry
 
             var contents = new List <ReadOnlyMemory<byte>>();
 
+            Console.Write($"\u000d-------- [Scanning: {path.GetString()}]\u001b[K\u001b[J\u000d");
+
+            int ct = 0;
             while (true)
             {
                 var dir = RawDirs.readdir_wrap(dirFd, false);  // Don't remove the null
                 if (dir == null) break;
 
+                ct++;
+
                 var d = dir.Value;
+
+                if (ct % 1000 == 0)
+                    Console.Write($"\u000d{ct.ToString("00000000")}\u000d");
 
                 //Console.WriteLine($"See {d.d_name.GetString()}");
 
-                contents.Add(d.d_name.AsMemory<byte>());                             
+                contents.Add(d.d_name.AsMemory<byte>());
             }
-
-            Console.WriteLine($"[Load {path.GetString()} ({contents.Count} entries)]");
+        
+            Console.Write($"\u000d-------- [Scanned:  {path.GetString()} ({contents.Count} entries)]\u001b[K\u001b[J\u000d");
 
             RawDirs.closedir(dirFd);
 
@@ -63,6 +71,9 @@ namespace NeoScry
 
             fn.Members = iterateMembers(files, startingPath.ToArray(), recurseGuard);
 
+            // Clear the last Line
+            //Console.Write($"\u000d\u001b[K\u001b[J\u000d");
+
             return fn;
         }
 
@@ -85,6 +96,8 @@ namespace NeoScry
 
                 yield return newNode;
             }
+
+          
         }
 
         private static bool SequenceStartsWith(ReadOnlyMemory<byte> f, byte[] cmp)

@@ -42,7 +42,7 @@ namespace NeoVirtFS
 
         private static MemoryCache nodeCache=null;
 
-        int verbosity = 1;
+        int verbosity = 0;
 
         NeoVirtFSNamespaces RootNameSpace = null;
         #endregion
@@ -613,7 +613,7 @@ namespace NeoVirtFS
         public override int Read(ReadOnlySpan<byte> path, ulong offset, Span<byte> buffer, ref FuseFileInfo fi)
         {
             if (verbosity > 15)
-                Console.WriteLine($"Read {path.GetString()}");
+                Console.WriteLine($"Read {path.GetString()} offset {offset} length {buffer.Length}");
 
             var fds = DescriptorStore[fi.fh];
             return fds.Handler.Read(fds, offset, buffer);

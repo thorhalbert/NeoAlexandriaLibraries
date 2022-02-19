@@ -261,6 +261,8 @@ public partial class Program
         Console.WriteLine($"Assimilate/Import NARP {narp} - map to {volume} - Volume Id {rootOfVolume}");
 
         var scan = ScanFileDirectory.RecursiveScan($"/NARP/{narp}/".ToSpan(), narp.ToSpan());
+        Console.WriteLine("Loaded: Assimilating");
+
         dumpPhysical(scan, narp);
 
         Assimilate(scan, 0, null, rootOfVolume);
