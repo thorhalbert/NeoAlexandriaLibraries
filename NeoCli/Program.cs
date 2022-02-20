@@ -66,6 +66,13 @@ public partial class Program
     { //normal options here
         [Value(0)]
         public IEnumerable<string> NarpList { get; set; }
+        [Option('s', "skipifdone", Required = false, HelpText = "Skip if the file is already assimilated")]
+        public bool SkipIfDone { get; set; }
+
+        [Option('a', "archivemode", Required = false, HelpText = "Assimilate Archives")]
+        public bool ArchiveMode { get; set; }
+
+
     }
     [Verb("dump-physical", HelpText = "Dump the backup of a physical NARP")]
     class DumpNARPOptions
@@ -127,7 +134,7 @@ public partial class Program
             case ImportNARPOptions a:
                 //Console.WriteLine("Command import-narp");
                 foreach (var narp in a.NarpList)
-                    AssimilateNarp(narp);
+                    AssimilateNarp(narp, a);
                 break;
             case DumpNARPOptions a:
                 //Console.WriteLine("Command dump-narp");
@@ -241,8 +248,14 @@ public partial class Program
         dumpPhysical(scan, narp);
     }
 
-    private static void AssimilateNarp(string narp)
+    private static void AssimilateNarp(string narp, ImportNARPOptions a)
     {
+        if (a.SkipIfDone && isMarkAssimilated(narp))
+        {
+            Console.WriteLine($"NARP: {narp} already assimilated");
+            return;
+        }
+
         NeoVirtFSVolumes.EnsureNarpVolumeExists(db, narp);
 
         // Just the beginning path (maybe we'll support the leading / but we're doing the normalized version)
@@ -266,6 +279,8 @@ public partial class Program
         dumpPhysical(scan, narp);
 
         Assimilate(scan, 0, null, rootOfVolume);
+
+        MarkAssimilated(narp);
     }
 
     private static void dumpPhysical(FileNode scan, string narp)
@@ -280,6 +295,21 @@ public partial class Program
         File.WriteAllText(path, jsonString);
 
         Console.WriteLine($"[Write Physical Dump: {path}]");
+    }
+
+    private static void MarkAssimilated(string narp)
+    {
+        var path = $"/ua/NeoVirtContentBaks/Physical-{narp}.import-narp-done";
+
+        string dateString = $"{DateTime.Now}";
+
+        File.WriteAllText(path, dateString);
+    }
+
+    private static bool isMarkAssimilated(string narp)
+    {
+        var path = $"/ua/NeoVirtContentBaks/Physical-{narp}.import-narp-done";
+        return File.Exists(path);
     }
 
     private static void Assimilate(FileNode scan, int level, NodeMark[] nodeStack, ObjectId rootOfVolume)

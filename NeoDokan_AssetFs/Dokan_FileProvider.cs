@@ -16,6 +16,11 @@ namespace NeoDokan_AssetFs
             baseFs = fs;
         }
 
+        public NtStatus Mounted(string mountPoint, IDokanFileInfo info)
+        {
+            throw new NotImplementedException();
+        }
+
         #region IDokanOperations Implementation
         void IDokanOperations.Cleanup(string fileName, IDokanFileInfo info)
         {
@@ -95,10 +100,6 @@ namespace NeoDokan_AssetFs
             return NtStatus.Success;
         }
 
-        NtStatus IDokanOperations.Mounted(IDokanFileInfo info)
-        {
-            return NtStatus.Success;
-        }
 
         NtStatus IDokanOperations.MoveFile(string oldName, string newName, bool replace, IDokanFileInfo info)
         {

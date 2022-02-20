@@ -157,6 +157,36 @@ public partial class Program
                 }
                 else
                 {
+                    // Let's see if we can handle the simple link to an archive directory
+                    // If the original archive exists we can just do that.
+
+                    var dirs = link.Split("/");
+                    if (dirs.Length == 4 && dirs[3].StartsWith("ARC-"))
+                    {
+                        Console.WriteLine($"Archive Link: {link} dirs={dirs.Length}");
+
+                        // ARC-56a6f879e8cb392b22bb7577bc5d4ba117587261-ZIP 
+                        // 01234567890123456789012345678901234567890123456789
+                        // 000000000011111111112222222222333333333344444444
+
+                        var sha1 = dirs[3][4..44].ToLowerInvariant();
+                        Console.WriteLine($"Org Sha1 is {sha1}");
+
+                        var assFilter = Builders<BakedAssets>.Filter.Eq("_id", sha1);
+                        var ass = bac.FindSync(assFilter).FirstOrDefault();
+                        if (ass == null)
+                        {
+                            Console.WriteLine("Can't recover the asset yet - not baked");
+                            return;
+                        }
+
+                        Console.WriteLine($"Org: {Encoding.UTF8.GetString(realPath.ToArray())} / {Encoding.UTF8.GetString(m.Name.ToArray())}");
+
+
+
+                        return;
+                    }
+
                     // Just going to skip it for now - have to look at the different link types
                     // The one we probably want to handle is purgecontainer links
                     Console.WriteLine($"Unknown link {link} - {Encoding.UTF8.GetString(realPath.ToArray())} / {Encoding.UTF8.GetString(m.Name.ToArray())}");
