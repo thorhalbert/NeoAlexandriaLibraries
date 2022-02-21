@@ -9,7 +9,7 @@ namespace Linux_FuseFilesystem
 {
     public class NarpMirror_TopLevel : FuseMountableBase
     {
-        private bool debug = false;
+        //private bool debug = false;
         public Dictionary<byte[], MountPoint> Mountpoints { get;  set; }
       
 

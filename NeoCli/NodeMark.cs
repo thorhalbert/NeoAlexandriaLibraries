@@ -187,6 +187,9 @@ public partial class Program
                         return;
                     }
 
+                    // Ultimately we may simply be able to add normalizable releative links just as copies of the original file
+                    // Normal operations don't generate many links (some of the OS backups are crazy)
+
                     // Just going to skip it for now - have to look at the different link types
                     // The one we probably want to handle is purgecontainer links
                     Console.WriteLine($"Unknown link {link} - {Encoding.UTF8.GetString(realPath.ToArray())} / {Encoding.UTF8.GetString(m.Name.ToArray())}");

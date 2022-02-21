@@ -67,7 +67,7 @@ namespace NeoVirtFS
             return base.Write(iot, off, span);
         }
 
-        public unsafe byte* toBp(ReadOnlySpan<byte> path)
+        public unsafe new byte* toBp(ReadOnlySpan<byte> path)
         {
             return RawDirs.ToBytePtr(path.ToArray());
         }
