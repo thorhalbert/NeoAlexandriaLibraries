@@ -276,11 +276,11 @@ public partial class Program
         var scan = ScanFileDirectory.RecursiveScan($"/NARP/{narp}/".ToSpan(), narp.ToSpan());
         Console.WriteLine("Loaded: Assimilating");
 
-        dumpPhysical(scan, narp);
-
         Assimilate(scan, 0, null, rootOfVolume);
 
         MarkAssimilated(narp);
+
+        dumpPhysical(scan, narp);
     }
 
     private static void dumpPhysical(FileNode scan, string narp)

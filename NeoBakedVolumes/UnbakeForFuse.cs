@@ -238,7 +238,7 @@ namespace AssetFileSystem
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"UnbakeForFuse::Read Error ({ex.GetType().Name}) - {ex.Message} {ex.StackTrace}");
+                    Console.WriteLine($"UnbakeForFuse::Read Error ({ex.GetType().Name}) - {ex.Message} {ex.StackTrace}\n  Offset={offset} Buffer={buffer.Length}");
                     return -1;
                 }
             }

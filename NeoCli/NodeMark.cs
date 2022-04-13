@@ -177,12 +177,29 @@ public partial class Program
                         if (ass == null)
                         {
                             Console.WriteLine("Can't recover the asset yet - not baked");
+
+                            // ** So, here we will construct a mount, even if it doesn't yet exist
+                            // **  (mount infrastructure or the archive itself) - purgecontainer deleted it, so we're stuck
+                            // ** Unless this is a mirror (the mount would likely confuse the mirror process)
+                            // ** We may still create the mount if the mirror is closed (though hard to know this yet)
+
+                            // The mount path is pretty straightforward, it's just the above link
+
+                            var mountVolume = dirs[3];
+                            var mountPath = "/"; 
+
+
+
                             return;
                         }
 
-                        Console.WriteLine($"Org: {Encoding.UTF8.GetString(realPath.ToArray())} / {Encoding.UTF8.GetString(m.Name.ToArray())}");
+                        Console.WriteLine($"Recover Asset: {Encoding.UTF8.GetString(realPath.ToArray())} / {Encoding.UTF8.GetString(m.Name.ToArray())}");
 
+                        // ** Simply point to the asset since it exists
 
+                        v.Stat = NeoVirtFSStat.FileDefault();
+                        v.Stat.st_size = ass.FileLength;
+                        GenerateAssetFile(m, stack, rootOfVolume, v.Stat, sha1, realPath, false);
 
                         return;
                     }
