@@ -15,7 +15,7 @@ namespace NeoFS
         static async Task Main(string[] args)
         {
             if (args.Length < 2)
-                throw new Exception($"Usage: NeoFS narpv|neovirt mountpoint <fuse-args>");
+                throw new Exception($"Usage: NeoFS neofs|neovirt mountpoint <fuse-args>");
 
             var fileType = args[0].ToLowerInvariant();
             var mountPoint = args[1];
@@ -43,6 +43,7 @@ namespace NeoFS
             {
 
                 case "neofs":
+                    throw new Exception("NEOFS deprecated");
 
                     var provisioner = new ProvisionFilesystem();
                     fileSystem = provisioner.CreateFs(NeoDb, narps);
@@ -74,6 +75,7 @@ namespace NeoFS
                 // Debug = "-d"
                 using (var mount = Fuse.Mount(mountPoint, fileSystem, mo, Arguments : new string[] {"-o", "allow_other" }))
                 {
+                    System.Console.WriteLine($"Unmounting filesystem at {mountPoint}");
                     await mount.WaitForUnmountAsync();
                 }
             }

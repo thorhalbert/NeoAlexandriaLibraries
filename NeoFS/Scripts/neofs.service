@@ -1,0 +1,14 @@
+[Unit]
+Description=NeoAlexandria FileSystem
+
+[Service]
+Type=notify
+
+ExecStart=/T/dotnet/NeoFS
+WorkingDirectory=/T/dotnet/NeoFS
+User=root
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
