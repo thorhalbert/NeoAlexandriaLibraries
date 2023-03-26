@@ -45,7 +45,7 @@ public class SuperAnneal : ICommandCallable
 
         var partList = new Dictionary<int,BakedVolumes_PartValues?>();
 
-        var ps = new string[] { "A", "B", "C", "D" };
+        var ps = new string[] { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L" };
         for (var i = 0; i < ps.Length; i++)
         {
             partList[i] = null;

@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspose.Email" Version="23.1.0" />
+    <PackageReference Include="Aspose.Email" Version="23.2.0" />
     <PackageReference Include="Tmds.LibC" Version="0.5.0" />
   </ItemGroup>
 
