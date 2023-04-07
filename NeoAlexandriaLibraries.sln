@@ -74,6 +74,9 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeoProcessingServer", "NeoProcessingServer\NeoProcessingServer.csproj", "{1272FB77-1DA5-4453-9C08-52EB3BAF1650}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Sisyphus", "Sisyphus", "{A4A55E16-183D-4BD0-AE85-FB14AEF780B3}"
+	ProjectSection(SolutionItems) = preProject
+		analysis.txt = analysis.txt
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sisyphus-HostController", "Sisyphus-HostController\Sisyphus-HostController.csproj", "{9652E4B9-92A5-49A3-A2E8-86ABAF0AA906}"
 EndProject

@@ -8,9 +8,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="GroupDocs.Metadata" Version="23.3.0" />
     <PackageReference Include="KaitaiStruct.Runtime.CSharp" Version="0.10.0" />
     <PackageReference Include="Mime-Detective" Version="22.12.14" />
     <PackageReference Include="Mime-Detective.Definitions.Exhaustive" Version="22.12.14" />
+    <PackageReference Include="VersOne.Epub" Version="3.3.0-alpha1" />
   </ItemGroup>
 
 </Project>

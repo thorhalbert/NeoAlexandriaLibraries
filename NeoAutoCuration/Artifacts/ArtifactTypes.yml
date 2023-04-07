@@ -1,0 +1,255 @@
+Artifacts:
+  Id: 352a523a-cb4a-43a9-9253-07733ef3a9af
+  Name: Unknown
+  Subs:
+  - Id: 9dec513a-b3d8-4cca-8017-7c4edaea7357
+    Name: Documents
+    Subs:
+    - Id: 24acefb1-3aec-464b-b639-f66309d7007c
+      Name: Bound
+      Subs:
+      - Attributes:
+        - Binding: [3-Ring, Case Bound (Hardcover), Perfect Binding, Saddle Stitch
+              Binding, Screw Bound, Spiral Bound, Wire Bound, Comb Bound, Stapled]
+        Id: d400809a-0a31-42d9-97f1-9856431f0958
+        Name: Book/Binder
+      - Attributes:
+        - Binding: [Saddle Stitch Binding, Perfect Binding, Stapled]
+        Id: d7955229-ff80-4425-92c7-35a128510166
+        Name: Magazine
+      - {Id: f0541a73-b290-47d7-a9c1-c9cfa9e4dfe9, Name: Pamphlet}
+    - Id: c432d5b4-81cc-4d61-b21e-708331d8b350
+      Name: Scroll
+      Subs:
+      - {Id: b79a8c69-d0db-4417-82ab-e14f5681d816, Name: Printout}
+      - {Id: 1c8fbdb1-4b4d-4d7a-98ef-223bfbf7d610, Name: Printout with fanfold}
+      - {Id: 7881c2dc-98bb-406d-9d2c-7b0ccef00e64, Name: 'Email, News Item'}
+      - {Id: 818e9189-9b22-4259-9be4-411091ae5a91, Name: Web Page}
+      - {Id: 1ba94afc-6726-4ecb-93c4-bd9478248421, Name: Map}
+      - {Id: 9f8f2bb2-1330-4a78-b48a-ae78dfae07b3, Name: Card}
+      - {Id: 23c1f8b5-d063-4cd7-a65f-d38ec812c4dd, Name: Origami}
+      - {Id: a61b6a94-6845-4cd4-955f-5d006ccfdd16, Name: Poster}
+    - Id: a5e6e637-e368-47cf-b064-96a0ec5687b7
+      Name: Deck
+      Subs:
+      - {Id: fd0896bb-b46c-4c45-b52e-43176cdbb98d, Name: Powerpoint}
+      - {Id: a5696d30-0062-46f3-b6f2-315e9770bc27, Name: Playing Cards}
+      - {Id: 7e17a304-8b25-4cfd-bf75-34f9e3a69c88, Name: Tarot}
+      - {Id: 157237c7-2c4d-4faa-bb6e-448b3706199f, Name: Gaming Cards}
+      - {Id: 150fe05f-b003-4a42-9a65-91b37d53f1e2, Name: Pictures}
+      - {Id: 122a84b6-c5c3-48f8-a3de-352652bf825f, Name: RSS Feeds/Mail Archive/Tumblr/Blog}
+  - Id: a6192877-e96a-4f27-bf24-d2fdf6230f26
+    Name: Media
+    Subs:
+    - Id: 976a25f9-5bd7-4070-9b2a-8b547d3c78bc
+      Name: Audio Recording
+      Subs:
+      - Attributes:
+        - Speed: [16, 33-1/3, 45, 78]
+        Id: 8c979404-2473-41d3-bbde-48cd8fea6e42
+        Name: Vinyl Record
+      - {Id: f58e4a33-5e88-4b85-ac54-9d717977f16a, Name: CD}
+      - {Id: 0aaca470-7795-432e-84de-9a10fc188769, Name: 8-Track}
+      - Attributes:
+        - {Length: null, UOM: Minutes}
+        Id: efa2faf1-474d-4e61-9d96-dd675a3f4ead
+        Name: Casssette
+      - {Id: 0300e213-2695-4bb3-bbb9-1b38d0864b06, Name: Reel-To-Reel}
+      - Attributes:
+        - {Length: null, UOM: Feet}
+        Id: ab159ad6-e86a-40c5-920c-d6948961ffd8
+      - {Id: e75134ed-99e6-47dd-a78e-77dcf758c3dc, Name: Wire Recording}
+      - {Id: c0e1e277-f7c7-431a-baa8-2cee40877b91, Name: Wax Cylinder}
+    - {Id: 7ec25124-f822-4f1a-9414-f226836df7db, Name: Film (Video)}
+    - Id: ff897c24-916f-4183-aef6-db2fc9cf8c7b
+      Name: Computer Media
+      Subs:
+      - Id: 77aa0972-c4fe-4e67-8b73-4b2cedbfc0a5
+        Name: Magnetic Media
+        Subs:
+        - {Id: 0f341e22-078a-4eb4-aa09-09bbc846f094, Name: Disk Drive}
+        - Id: 2fafaa3e-0698-49e9-b078-06e3df3d850c
+          Name: Removable Media Disk Drive Pack
+          Subs:
+          - {Id: 631c2fb2-73ca-4030-a6ee-c3e807816fb2, Name: CDC 9766/DEC RM05}
+          - {Id: 51bde1b9-96a6-4819-a48c-bbd21f333014, Name: CDC 9760}
+          - {Id: ba191788-25ed-46ba-baa0-a0b646299c7b, Name: CDC 9762/DEC RM02/DEC
+              RM03}
+          - {Id: bffb650a-4801-4f1d-b9a0-277d44081976, Name: DEC RK05}
+          - {Id: d1721337-d548-476f-84c7-95745c86aac0, Name: DEC RK06}
+          - {Id: 8f09da37-056b-46c1-86af-0eb8e78b4952, Name: DEC RK07}
+          - {Id: 65db1fdb-3710-447a-9b4a-9ef95063fa66, Name: DEC RL01}
+          - {Id: 1c03b885-dfc9-43e4-a90d-78b010bdc6a2, Name: DEC RL02}
+          - {Id: 9bf706be-8f55-4158-8fb6-7776953ee341, Name: DEC RA60P}
+          - {Id: a22d891c-8368-4601-9011-d9d242fd7ccd, Name: DEC RP04}
+          - {Id: 7cc8d6f2-6477-4e14-a715-94a9b2ea1ceb, Name: DEC RP06 (Memorex 677)}
+        - Id: fdfe9574-354a-4195-bf72-216234536d9c
+          Name: Digital Tapes
+          Subs:
+          - {Id: cf9a3579-96a0-4a7b-ab55-ba69b87c4aaa, Name: 9-Track Magtape}
+          - {Id: 60c6029c-4f4b-4f3b-b775-56cca149e4d4, Name: 7-Track Magtape}
+          - {Id: a651fc53-2c76-4293-a861-0880f7c2a8a8, Name: QIC (Quarter Inch Cartridge)}
+          - {Id: a98fdf03-4c2d-4e04-870b-35370658cf31, Name: 8MM Tapes}
+          - {Id: ae1dabd9-d79d-4a45-a698-c25981319fee, Name: Digital VHS}
+          - {Id: 88fd7087-bd42-44da-9717-34b4cf1f6bed, Name: DECTape}
+        - Id: 920823f8-f940-4905-b35d-659ab53fe86b
+          Name: Floppy Disk Media
+          Subs:
+          - {Id: 80e838f6-04f5-450b-b7c9-547efd3a63f3, Name: 8 Inch}
+          - {Id: 9e4f90a2-20cf-45f7-a0ea-0e4be41e362c, Name: 5-1/4 Inch}
+          - {Id: ccf7790f-faea-42d3-a31a-c21456b17a6f, Name: 3-1/2 Inch}
+          - {Id: 3d43893f-798c-405d-9ed6-47f3bc2f16c8, Name: ZIPDrive}
+      - Id: 4d9829cd-779c-46fb-9cdf-cd4143422e4a
+        Name: Optical Media
+        Subs:
+        - {Id: 14185773-7147-4250-b559-31ffec54bbe5, Name: CD-ROM}
+        - {Id: 4a32093b-0e52-4a80-8fcf-9699e8581e2d, Name: DVD}
+        - {Id: 401ac128-4117-49e1-8d6c-d56352c13c67, Name: Blu-Ray}
+      - Id: 0a0db398-6856-4615-ace4-2c36ba8d49e1
+        Name: Game ROM Cartridge
+        Subs:
+        - Id: 6efb9054-1cd3-4979-8fec-4cac9b000fd2
+          Name: Amstrad
+          Subs:
+          - {Id: f139a848-86ba-4f71-be05-9113817838a2, Name: Amstrad GX4000}
+        - Id: 7b28c60d-76c0-4993-bc01-f4a182ea6775
+          Name: Atari
+          Subs:
+          - {Id: 99ba6f7e-f8c9-4a86-83c7-3dc3bdba9e6e, Name: Atari 2600}
+          - {Id: 78414ee7-b15c-4064-866c-edda3a69b27e, Name: Atari 5200}
+          - {Id: ce841ee1-a7fe-41a4-a556-2c8007c726a2, Name: Atari 7800}
+          - {Id: cba4072f-8013-4ff3-bb7a-532f79278a30, Name: Atari XEGS}
+          - {Id: fa0dfd5e-9c80-4dfa-a94a-ddff050f5c5a, Name: Atari Lynx}
+          - {Id: 3b047386-bac7-4aed-a2af-eb9ec3ecc349, Name: Atari Jaguar}
+        - Id: 58f2c5bd-0abb-4f21-8839-70ec10cdafd2
+          Name: Bandai
+          Subs:
+          - {Id: 86863ee0-aeb5-49f5-8b7b-e865bf4fb719, Name: WonderSwan}
+          - {Id: f99f88ad-5cc3-464a-af4c-c61fb5b88fdb, Name: WonderSwan Color}
+          - {Id: b272cb4b-a3c6-40a7-8fea-3ebb602751fe, Name: SwanCrystal}
+        - Id: 73242420-8a46-481e-9847-44bbaf0223ef
+          Name: Coleco
+          Subs:
+          - {Id: d5cea5a9-28be-42e6-b26a-9defef46042b, Name: Colecovision}
+        - Id: ea4717d3-7b00-48a0-93e7-ae87dbc89f79
+          Name: Fairchild
+          Subs:
+          - {Id: 6b23b290-ea91-4306-b45f-2fe6a46dc59a, Name: Fairchild Channel F}
+        - Id: 30b03c7d-f3f6-4c10-bbc8-727dd1edb2d2
+          Name: Magnavox/Phillips
+          Subs:
+          - {Id: e2feebc1-cb3b-410d-b7f8-3dde367fcdfe, Name: Magnavox Odyssey}
+          - {Id: f4a5f870-4c2f-402c-b743-d002f35a342c, Name: Phillips Videopac G7000}
+        - Id: 11e0dfbb-5884-4f7d-8305-3c0b18e7590a
+          Name: Mattel
+          Subs:
+          - {Id: 9074a36d-0e7d-449f-98f8-5b1b682c62f4, Name: Intellivision}
+        - Id: 285ad4f3-4058-4830-9723-81b66cd32cf7
+          Name: Milton Bradley
+          Subs:
+          - {Id: e3912a48-5728-4e59-9f13-853bbe51ad9d, Name: Vectrex}
+        - Id: 13e76fc4-8a49-40e1-9c34-698d8b45d829
+          Name: NEC
+          Subs:
+          - {Id: e4a87a03-6f95-455a-9960-4bb91660a734, Name: TurboGrafx-16/PC Engine}
+          - {Id: 98fe00bd-042a-45cd-92ac-d8288d589174, Name: TurboExpress}
+        - Id: 36404e03-b351-4b5c-86ae-8b6f1ebca948
+          Name: Nintendo
+          Subs:
+          - {Id: 86e37002-c5ef-4469-b3a6-b22665b92dd0, Name: NES/Famicom}
+          - {Id: b0ffeaae-f21a-4d2b-81de-a26a9cb4af50, Name: SNES/Super NES/Famicom}
+          - {Id: 541894e0-7161-4f3c-b474-b0e32d4c319b, Name: Nintendo 64}
+          - {Id: 16966f59-7506-4970-870e-6d930e9c734c, Name: Game Boy}
+          - {Id: 4793ff3c-db7a-4439-9702-e89e8d245818, Name: Game Boy Color}
+          - {Id: 76bb3572-4b8b-46e2-b41e-72464fb019db, Name: Game Boy Advance}
+          - {Id: 2790cc2e-4c60-484f-b62e-6932272a62cf, Name: Virtual Boy}
+          - {Id: 29fc99a9-5123-4c48-b3f6-d8f7c4f44b8f, Name: Pokemon Mini}
+          - {Id: 3e6fea08-53d3-4c59-af3d-37bf23d67be6, Name: Nintendo DS}
+          - {Id: 53f6bcd2-5c7f-4612-9923-3383c45926d8, Name: Nintendo 3DS}
+          - {Id: 5edfc544-99f2-48e9-a355-98a3c4191769, Name: Nintendo Switch}
+        - Id: 7ee8d749-e84e-469b-8a6b-bb868ca10767
+          Name: Sega
+          Subs:
+          - {Id: 04e82f44-32ea-42f3-8a4a-3c8dff93b8c7, Name: SG-1000 Mark I}
+          - {Id: afa4f3de-7be6-4ab4-8b24-ff27bbf9aacd, Name: SG-1000 Mark II}
+          - {Id: 1723acb8-3b00-4a4a-af05-5ffcd5d059cb, Name: Sega Master System/Sega
+              Mark III}
+          - {Id: 6efff084-1585-4ed2-9070-a3ecb1199c36, Name: Sega Genesis/Mega Drive}
+          - {Id: 30130f73-d5d4-4049-ba57-91620dab4865, Name: Sega Game Gear}
+          - {Id: 10468e42-3e29-41cc-8935-a56efddb2228, Name: Sega 32X}
+        - Id: 6ea13835-34a1-4a2e-8e9a-25c6045e2253
+          Name: SNK
+          Subs:
+          - {Id: d84a014d-c613-4ff1-aa62-68e6ded429b1, Name: Neo Geo}
+          - {Id: 74643153-8df1-4b6c-9a2c-ec5d00e1aa02, Name: Neo Geo Pocket}
+          - {Id: 78574563-d9ea-48e5-8150-44907d0805c1, Name: Neo Geo Pocket Color}
+          - {Id: 2a0560ce-1d4f-4870-b736-cdd2175272e9, Name: Neo Geto X}
+        - Id: 9fb60709-6eea-4c72-b680-b991a550db63
+          Name: Sony
+          Subs:
+          - {Id: 1dc9819e-7b92-418e-96ef-f54e7099bca5, Name: PS Vita/PlayStation TV}
+        - Id: 8a4ed8bc-582d-4f34-88f2-cddf0d0b8d66
+          Name: Nikko Europe
+          Subs:
+          - {Id: c1f84691-beb9-41f2-904f-affdc6bde24d, Name: digiBLAST}
+        - Id: 7866d4da-f535-4c44-891c-758371f3861d
+          Name: Nokia
+          Subs:
+          - {Id: 7627a415-2ac2-4853-b002-df629b6d48d6, Name: N-Guage}
+        - Id: 5109b57f-dc1f-4e23-9a80-ae359f1469e7
+          Name: LeapFrog
+          Subs:
+          - {Id: 17e34c2e-4f0e-4cb4-87ad-160b18db671b, Name: Leapster}
+          - {Id: 8b28b1fd-2778-4198-acd0-1e0ab74f6d27, Name: LeapPad}
+          - {Id: 82cf3957-5201-46d4-991d-c8a560ca987b, Name: LeapTV}
+        - Id: da0dc50a-a4f0-42b2-a0bb-5e391f4c838d
+          Name: Fischer Price
+          Subs:
+          - {Id: d6a758ba-fba2-4fa3-bc4e-46c174bd3da0, Name: Pixter}
+          - {Id: ea6e19ce-7e8e-49f1-b734-ac34a64985e1, Name: Smart Cycle}
+      - Id: 45a21573-22a1-4fe3-b2ed-d6813c1dfd86
+        Name: Solid State Media
+        Subs:
+        - {Id: 4a04351a-fa17-4f9a-a2a3-559d46a3b9f5, Name: ThumbDrive}
+        - {Id: 8525311c-10d3-4ea3-9026-eb6ad0c9275d, Name: Solid State Disk}
+      - Id: c4cc9fa3-f5b3-4cb8-83c5-ee9a5e71c086
+        Name: Non-Volitile Media
+        Subs:
+        - {Id: 829a3816-d44d-47cd-acc5-5d677e58fead, Name: Paper Tape (8-Bit)}
+        - {Id: c64df601-de07-45c0-9176-ce77e94fc587, Name: Baudot Ticker Tape}
+        - {Id: 699c235a-f17b-4d88-b4f3-4a970f0fccf5, Name: Holerith Punched Cards}
+        - {Id: 0d31f27e-14e1-4dfc-99d6-0da376dcadb7, Name: ROMs/PROMs/EPROMs}
+        - {Id: a1663145-ecfc-4adf-9d73-1eba4819d706, Name: EPROMs}
+      - {Id: fb449ac6-8ebb-4e4a-854e-96e5358c4703, Name: Abstracted Access to Files/Directory}
+      - {Id: 6ddcac65-856b-4061-880d-66820440d0a5, Name: Mapping to Real/Remote Filesystems}
+  - {Id: ffe506d5-4251-411a-83a8-7f19e016ab2b, Name: 3D Models}
+  - {Id: 31da66aa-d8ae-4131-91fc-71652a907a00, Name: Virtualized Objects}
+  - Id: 9c5fa680-392a-491e-aec7-0e0a9790437e
+    Name: Virtualized Environments
+    Subs:
+    - {Id: 77fd76c5-1e0a-47b0-a49c-f9ec6fb07469, Name: Arcade Games}
+    - {Id: d58b4d9a-3041-4506-aacc-6f854cdbd51a, Name: 'PCs, MiniComputers, Mainframes'}
+    - {Id: 421c1e2b-2bb7-443b-ab06-d95bca796112, Name: Imaginary Computers (Tardis
+        Consoles)}
+    - {Id: a662c12d-636b-4303-8a67-56a100036674, Name: Streaming Radio Stations}
+    - {Id: e4f76c1c-6095-49d8-9ee3-9cd3cfec5d82, Name: Simulations (Orreries)}
+    - {Id: 3effd9d7-a47e-497a-ab1d-bd8cb861d4fc, Name: 'Vehicles (Trains, Planes,
+        Starships)'}
+    - {Id: f4ed0cfe-a1db-4389-8c3b-5262bf8ebba8, Name: Robots/Androids (ROS Operating
+        System)}
+    - {Id: 5668a698-b07e-494a-9ec0-bfc8736bb603, Name: Machines}
+    - {Id: ea156ceb-13e8-4183-9704-846abb795a08, Name: Furniture}
+    - {Id: 3323ae24-8ead-4cc7-bc27-1e77e819e95b, Name: 'Clothing, Armor, etc'}
+  - {Id: b5027d90-5f6e-49a0-9155-403875abfc30, Name: Collections (Curated/AutoCurated)}
+  - {Id: 58ed79df-c2da-4a9b-b6de-2243d326b947, Name: Plug-Panels (Virtualized Wiring)}
+  - {Id: ddb427ce-1a55-46d2-8350-3d244f9fcc4b, Name: Containerized Code (Running Container/Docker
+      exposing a service)}
+  - {Id: 5a968b2e-a2fd-4c47-9854-a936a2d7169a, Name: Cloud Service}
+  - Id: 5b35dfef-10af-442f-8ab6-ec3093e2ca11
+    Name: Characters
+    Subs:
+    - {Id: 4d4f1833-5dfb-47ab-87a7-5e8ef5af83ce, Name: NPCs}
+    - {Id: e173fbb6-e02c-4b2c-bf08-59c046a98750, Name: Animals}
+    - {Id: c0681e27-494c-4a5f-b5b6-7e7cab173871, Name: Robots}
+    - {Id: da64ca9a-03e0-4233-8bac-4345d622c2df, Name: Avatars}
+  - {Id: 83ccb282-4a83-43f5-a047-10d79e7e1a67, Name: Metadata}

@@ -1,0 +1,236 @@
+--- # Artifact Heirarchy
+Artifacts:
+ Name: Unknown
+ Id: 352a523a-cb4a-43a9-9253-07733ef3a9af
+ Subs:
+  - Name: Documents
+    Id: 9dec513a-b3d8-4cca-8017-7c4edaea7357
+    Subs:
+    - Name: Bound
+      Id: 24acefb1-3aec-464b-b639-f66309d7007c
+      Subs:
+      - Name: Book/Binder
+        Attributes:
+        - Binding:
+          - 3-Ring
+          - Case Bound (Hardcover)
+          - Perfect Binding
+          - Saddle Stitch Binding
+          - Screw Bound
+          - Spiral Bound
+          - Wire Bound
+          - Comb Bound
+          - Stapled
+      - Name: Magazine
+        Attributes:
+        - Binding:
+          - Saddle Stitch Binding
+          - Perfect Binding
+          - Stapled
+      - Name: Pamphlet
+    - Name: Scroll
+      Id: c432d5b4-81cc-4d61-b21e-708331d8b350
+      Subs:
+      - Name: Printout
+      - Name: Printout with fanfold
+      - Name: Email, News Item
+      - Name: Web Page
+      - Name: Map
+      - Name: Card
+      - Name: Origami
+      - Name: Poster
+    - Name: Deck
+      Id: a5e6e637-e368-47cf-b064-96a0ec5687b7
+      Subs:
+      - Name: Powerpoint
+      - Name: Playing Cards
+      - Name: Tarot
+      - Name: Gaming Cards
+      - Name: Pictures
+      - Name: RSS Feeds/Mail Archive/Tumblr/Blog
+  - Name: Media
+    Id: a6192877-e96a-4f27-bf24-d2fdf6230f26
+    Subs:
+    - Name: Audio Recording
+      Subs: 
+      - Name: Vinyl Record
+        Attributes: 
+        - Speed:
+          - 16
+          - 33-1/3
+          - 45
+          - 78
+      - Name: CD
+      - Name: 8-Track
+      - Name: Casssette
+        Attributes:
+        - Length:
+          UOM: Minutes
+      - Name: Reel-To-Reel
+      - Attributes:
+        - Length:
+          UOM: Feet
+      - Name: Wire Recording
+      - Name: Wax Cylinder
+    - Name: Film (Video)
+    - Name: Computer Media
+      Subs: 
+      - Name: Magnetic Media
+        Subs:
+        - Name: Disk Drive
+        - Name: Removable Media Disk Drive Pack
+          Subs:
+          - Name: CDC 9766/DEC RM05
+          - Name: CDC 9760
+          - Name: CDC 9762/DEC RM02/DEC RM03
+          - Name: DEC RK05
+          - Name: DEC RK06
+          - Name: DEC RK07
+          - Name: DEC RL01
+          - Name: DEC RL02
+          - Name: DEC RA60P
+          - Name: DEC RP04
+          - Name: DEC RP06 (Memorex 677)
+        - Name: Digital Tapes
+          Subs:
+          - Name: 9-Track Magtape
+          - Name: 7-Track Magtape
+          - Name: QIC (Quarter Inch Cartridge)
+          - Name: 8MM Tapes
+          - Name: Digital VHS
+          - Name: DECTape
+        - Name: Floppy Disk Media
+          Subs:
+          - Name: 8 Inch
+          - Name: 5-1/4 Inch
+          - Name: 3-1/2 Inch
+          - Name: ZIPDrive
+      - Name: Optical Media
+        Subs:
+        - Name: CD-ROM
+        - Name: DVD
+        - Name: Blu-Ray
+      - Name: Game ROM Cartridge
+        Subs:
+        - Name: Amstrad
+          Subs:
+          - Name: Amstrad GX4000
+        - Name: Atari
+          Subs:
+           - Name: Atari 2600
+           - Name: Atari 5200
+           - Name: Atari 7800
+           - Name: Atari XEGS
+           - Name: Atari Lynx
+           - Name: Atari Jaguar
+        - Name: Bandai
+          Subs:
+           - Name: WonderSwan
+           - Name: WonderSwan Color
+           - Name: SwanCrystal
+        - Name: Coleco
+          Subs:
+          - Name: Colecovision
+        - Name: Fairchild
+          Subs:
+          - Name: Fairchild Channel F
+        - Name: Magnavox/Phillips
+          Subs:
+          - Name: Magnavox Odyssey
+          - Name: Phillips Videopac G7000
+        - Name: Mattel
+          Subs:
+          - Name: Intellivision
+        - Name: Milton Bradley
+          Subs:
+          - Name: Vectrex
+        - Name: NEC
+          Subs:
+          - Name: TurboGrafx-16/PC Engine
+          - Name: TurboExpress
+        - Name: Nintendo
+          Subs:
+          - Name: NES/Famicom
+          - Name: SNES/Super NES/Famicom
+          - Name: Nintendo 64
+          - Name: Game Boy
+          - Name: Game Boy Color
+          - Name: Game Boy Advance
+          - Name: Virtual Boy
+          - Name: Pokemon Mini
+          - Name: Nintendo DS
+          - Name: Nintendo 3DS
+          - Name: Nintendo Switch
+        - Name: Sega
+          Subs:
+          - Name: SG-1000 Mark I
+          - Name: SG-1000 Mark II
+          - Name: Sega Master System/Sega Mark III
+          - Name: Sega Genesis/Mega Drive
+          - Name: Sega Game Gear
+          - Name: Sega 32X
+        - Name: SNK
+          Subs:
+          - Name: Neo Geo
+          - Name: Neo Geo Pocket
+          - Name: Neo Geo Pocket Color
+          - Name: Neo Geto X
+        - Name: Sony
+          Subs:
+          - Name: PS Vita/PlayStation TV
+        - Name: Nikko Europe
+          Subs:
+          - Name: digiBLAST
+        - Name: Nokia
+          Subs:
+          - Name: N-Guage
+        - Name: LeapFrog
+          Subs:
+          - Name: Leapster
+          - Name: LeapPad
+          - Name: LeapTV
+        - Name: Fischer Price
+          Subs:
+          - Name: Pixter
+          - Name: Smart Cycle
+      - Name: Solid State Media
+        Subs:
+        - Name: ThumbDrive
+        - Name: Solid State Disk
+      - Name: Non-Volitile Media
+        Subs:
+        - Name: Paper Tape (8-Bit)
+        - Name: Baudot Ticker Tape
+        - Name: Holerith Punched Cards
+        - Name: ROMs/PROMs/EPROMs
+        - Name: EPROMs
+      - Name: Abstracted Access to Files/Directory
+      - Name: Mapping to Real/Remote Filesystems
+  - Name: 3D Models
+    Id: ffe506d5-4251-411a-83a8-7f19e016ab2b
+  - Name: Virtualized Objects
+    Id: 31da66aa-d8ae-4131-91fc-71652a907a00
+  - Name: Virtualized Environments
+    Id: 9c5fa680-392a-491e-aec7-0e0a9790437e
+    Subs: 
+    - Name: Arcade Games
+    - Name: PCs, MiniComputers, Mainframes
+    - Name: Imaginary Computers (Tardis Consoles)
+    - Name: Streaming Radio Stations
+    - Name: Simulations (Orreries)
+    - Name: Vehicles (Trains, Planes, Starships)
+    - Name: Robots/Androids (ROS Operating System)
+    - Name: Machines
+    - Name: Furniture
+    - Name: Clothing, Armor, etc
+  - Name: Collections (Curated/AutoCurated)
+  - Name: Plug-Panels (Virtualized Wiring)
+  - Name: Containerized Code (Running Container/Docker exposing a service)
+  - Name: Cloud Service
+  - Name: Characters
+    Subs:
+    - Name: NPCs
+    - Name: Animals
+    - Name: Robots
+    - Name: Avatars
+  - Name: Metadata
