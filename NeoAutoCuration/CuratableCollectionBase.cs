@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace NeoAutoCuration
 {
-    internal interface ICuratableCollection
+    public abstract class CuratableCollectionBase
     {
     }
 }
