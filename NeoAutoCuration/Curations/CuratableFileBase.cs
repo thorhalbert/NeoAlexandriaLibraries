@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace NeoAutoCuration
+namespace NeoAlexandria.NeoAutoCuration.Curations
 {
-    public abstract class ArtifactBase
+    public abstract class CuratableFileBase
     {
     }
 }
