@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="KaitaiStruct.Runtime.CSharp" Version="0.10.0" />
+    <PackageReference Include="Mime-Detective" Version="22.12.14" />
+    <PackageReference Include="Mime-Detective.Definitions.Exhaustive" Version="22.12.14" />
+  </ItemGroup>
+
+</Project>
