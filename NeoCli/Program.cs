@@ -31,7 +31,7 @@ public partial class Program
 {
     const string AssetTag = "/NEOASSET/sha1/";
 
-    public static IMongoDatabase db { get; private set; }
+    public static IMongoDatabase? db { get; private set; }
 
     private static IMongoCollection<AssetFiles> af;
     private static IMongoCollection<BakedAssets> bac;

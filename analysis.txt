@@ -5,7 +5,8 @@ It's not intended to work like kubernettes...
 
 Kubernettes doesn't do what I want for a few reasons.
 
-1.  I have a large cluster of NFS disks which I manage.   Kube does this, but I have many dozens of these, which is really a pain to manage with volumes and such in kube.   These end up being "volume profiles", which have security connotations.
+1.  I have a large cluster of NFS disks which I manage.   Kube does this, but I have many dozens of these, which is really a pain to manage with volumes and such in kube.
+	These end up being "volume profiles", which have security connotations.
 2.  I have some fusefs file systems which again are a pain.  They can simply be imported into a container with the -V option.
 3.  I can write a big batch of tools that can wrap the operations to control them.
 4.  Likely this can run in kube too eventually.
