@@ -1,0 +1,26 @@
+﻿@page "/videos"
+
+
+// https://learn.microsoft.com/en-us/aspnet/core/blazor/components/virtualization?view=aspnetcore-8.0
+
+<h3>Movies</h3>
+
+<Virtualize Context="employee" ItemsProvider="@LoadEmployees">
+    <p>
+        @employee.FirstName @employee.LastName has the
+        job title of @employee.JobTitle.
+    </p>
+</Virtualize>
+
+@code {
+
+    private async ValueTask<ItemsProviderResult<Employee>> LoadEmployees(ItemsProviderRequest request)
+    {
+        var numEmployees = Math.Min(request.Count, totalEmployees - request.StartIndex);
+        var employees = await EmployeesService.GetEmployeesAsync(request.StartIndex, 
+            numEmployees, request.CancellationToken);
+
+        return new ItemsProviderResult<Employee>(employees, totalEmployees);
+    }
+
+}

@@ -1,4 +1,3 @@
-﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31815.197
@@ -88,11 +87,17 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sisyphus-UI.Client", "Sisyp
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sisyphus-UI.Shared", "Sisyphus-UI\Shared\Sisyphus-UI.Shared.csproj", "{09C97F52-A41B-4AD6-B571-B0E7D5EFD8AA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeoAutoCuration", "NeoAutoCuration\NeoAutoCuration.csproj", "{B8F5B598-C2C4-4857-AEA8-94E5F568C8F7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeoAutoCuration", "NeoAutoCuration\NeoAutoCuration.csproj", "{B8F5B598-C2C4-4857-AEA8-94E5F568C8F7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SisyphusLib", "SisyphusLib\SisyphusLib.csproj", "{47E091DE-101F-47CE-B9C5-456F366237CD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SisyphusLib", "SisyphusLib\SisyphusLib.csproj", "{47E091DE-101F-47CE-B9C5-456F366237CD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SisyphusProtos", "SisyphusProtos\SisyphusProtos.csproj", "{C02FDD18-4D21-43BA-A30D-94D31A900769}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SisyphusProtos", "SisyphusProtos\SisyphusProtos.csproj", "{C02FDD18-4D21-43BA-A30D-94D31A900769}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeoMediaCuration", "NeoMediaCuration\NeoMediaCuration.csproj", "{2A55D322-6D79-4495-B189-524AF617E0BD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeoCMS", "NeoCMS\NeoCMS\NeoCMS.csproj", "{BCC804F9-A9A5-4EA0-B4CA-584CBB6C04A3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeoCMS.Client", "NeoCMS\NeoCMS.Client\NeoCMS.Client.csproj", "{A79CE7E3-AEDC-4953-A5BC-6D006B45704F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -228,6 +233,18 @@ Global
 		{C02FDD18-4D21-43BA-A30D-94D31A900769}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C02FDD18-4D21-43BA-A30D-94D31A900769}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C02FDD18-4D21-43BA-A30D-94D31A900769}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2A55D322-6D79-4495-B189-524AF617E0BD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2A55D322-6D79-4495-B189-524AF617E0BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2A55D322-6D79-4495-B189-524AF617E0BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2A55D322-6D79-4495-B189-524AF617E0BD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BCC804F9-A9A5-4EA0-B4CA-584CBB6C04A3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BCC804F9-A9A5-4EA0-B4CA-584CBB6C04A3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BCC804F9-A9A5-4EA0-B4CA-584CBB6C04A3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BCC804F9-A9A5-4EA0-B4CA-584CBB6C04A3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A79CE7E3-AEDC-4953-A5BC-6D006B45704F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A79CE7E3-AEDC-4953-A5BC-6D006B45704F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A79CE7E3-AEDC-4953-A5BC-6D006B45704F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A79CE7E3-AEDC-4953-A5BC-6D006B45704F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
