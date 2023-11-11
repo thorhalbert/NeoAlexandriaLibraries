@@ -1,26 +1,68 @@
 ﻿@page "/videos"
+@rendermode RenderMode.InteractiveServer
 
 
-// https://learn.microsoft.com/en-us/aspnet/core/blazor/components/virtualization?view=aspnetcore-8.0
+@using MongoDB.Driver
+@using NeoCommon
+@using NeoCommon.MongoModels
+@using System
+@using System.Collections.Generic
+@using System.Threading.Tasks
 
 <h3>Movies</h3>
 
-@* <Virtualize Context="employee" ItemsProvider="@LoadEmployees">
+<Virtualize Context="movie" ItemsProvider="@LoadAllMovies">
     <p>
-        @employee.FirstName @employee.LastName has the
-        job title of @employee.JobTitle.
+        ITEM: @movie.Title
     </p>
-</Virtualize> *@
+</Virtualize> 
 
 @code {
 
-    // private async ValueTask<ItemsProviderResult<Employee>> LoadEmployees(ItemsProviderRequest request)
-    // {
-    //     var numEmployees = Math.Min(request.Count, totalEmployees - request.StartIndex);
-    //     var employees = await EmployeesService.GetEmployeesAsync(request.StartIndex, 
-    //         numEmployees, request.CancellationToken);
+    // https://learn.microsoft.com/en-us/aspnet/core/blazor/components/virtualization?view=aspnetcore-8.0
 
-    //     return new ItemsProviderResult<Employee>(employees, totalEmployees);
-    // }
+    private static IMongoCollection<MediaCuration>? _MediaCuration;
 
+    private async ValueTask<ItemsProviderResult<MediaCuration>> LoadAllMovies(ItemsProviderRequest request)
+    {
+        Console.WriteLine("LoadAllMovies Called");
+
+        //var lst2 = new List<MediaCuration> { new MediaCuration { Title = "Title1" }, new MediaCuration { Title = "Title2" } };
+        //return new ItemsProviderResult<MediaCuration>(lst2, 2);
+
+        if (_MediaCuration == null)
+            _MediaCuration = NeoMongo.NeoDb.MediaCuration();
+
+        try
+        {
+
+            var filter = Builders<MediaCuration>.Filter.Eq("Repo", "Movies");
+            var options = new FindOptions<MediaCuration>
+                {
+                    Skip = request.StartIndex,
+                    Limit = request.Count,
+                    Sort = Builders<MediaCuration>.Sort.Combine(
+                            Builders<MediaCuration>.Sort.Ascending("Year"),
+                            Builders<MediaCuration>.Sort.Ascending("Title")),
+                    MaxAwaitTime = new TimeSpan(0, 2, 0),
+                    MaxTime = new TimeSpan(0, 2, 0)
+                    //NoCursorTimeout = true
+                };
+
+            Console.WriteLine("LoadAllMovies FindAsync");
+            var cursor = _MediaCuration.FindSync(filter, options);
+            var lst = cursor.ToList<MediaCuration>();
+
+            //foreach (var i in lst)
+            //    Console.WriteLine($"Movie: {i.Title}");
+
+            return new ItemsProviderResult<MediaCuration>(lst, request.Count);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+            var lst3 = new List<MediaCuration> { new MediaCuration { Title = ex.Message } };
+            return new ItemsProviderResult<MediaCuration>(lst3, request.Count);
+        }
+    }
 }
