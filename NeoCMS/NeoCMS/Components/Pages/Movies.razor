@@ -8,20 +8,59 @@
 @using System
 @using System.Collections.Generic
 @using System.Threading.Tasks
+@using System.Text
 
 <h3>Movies</h3>
 
+<div style="height:500px; overflow-y:scroll" tabindex="-1">
 <Virtualize Context="movie" ItemsProvider="@LoadAllMovies">
     <p>
         ITEM: @movie.Title
+            <img src="@getMoviePoster(movie)" alt="Embedded Image">
+
+  
     </p>
 </Virtualize> 
+</div>
 
 @code {
 
     // https://learn.microsoft.com/en-us/aspnet/core/blazor/components/virtualization?view=aspnetcore-8.0
 
     private static IMongoCollection<MediaCuration>? _MediaCuration;
+
+    public async Task<string> getMoviePosterAsync(MediaCuration movie)
+    {
+        //    <img src="@(async () => await getMoviePosterAsync(movie))" alt="Embedded Image">
+
+        var baseDir = Encoding.UTF8.GetString(movie.Path);
+        Console.WriteLine($"FileName: {baseDir}");
+        var fileN = FindFirstFile(baseDir, "*-poster.jpg");
+        if (fileN == null) return "";
+        Console.WriteLine($"Poster: {fileN}");
+
+        if (Path.Exists(fileN))
+
+            return $"data:image/jpg;base64,{Convert.ToBase64String(await File.ReadAllBytesAsync(fileN))}";
+
+        return "";   // Ultimately pass back a default image
+    }
+
+
+    public string getMoviePoster(MediaCuration movie)
+    {
+        var baseDir = Encoding.UTF8.GetString(movie.Path);
+        Console.WriteLine($"FileName: {baseDir}");
+        var fileN = FindFirstFile(baseDir, "*-poster.jpg");
+        if (fileN == null) return "";
+        Console.WriteLine($"Poster: {fileN}");
+
+        if (Path.Exists(fileN))
+            return $"data:image/jpg;base64,{Convert.ToBase64String(File.ReadAllBytes(fileN))}";
+
+        return "";   // Ultimately pass back a default image
+    }
+
 
     private async ValueTask<ItemsProviderResult<MediaCuration>> LoadAllMovies(ItemsProviderRequest request)
     {
@@ -64,5 +103,27 @@
             var lst3 = new List<MediaCuration> { new MediaCuration { Title = ex.Message } };
             return new ItemsProviderResult<MediaCuration>(lst3, request.Count);
         }
+    }
+
+    public static string? FindFirstFile(string directory, string pattern)
+    {
+        try
+        {
+            foreach (string file in Directory.EnumerateFiles(directory, pattern, SearchOption.TopDirectoryOnly))
+                return Path.Combine(directory, file);
+
+            foreach (string subdirectory in Directory.EnumerateDirectories(directory))
+            {
+                var filename = FindFirstFile(subdirectory, pattern);
+                if (filename != null)
+                    return filename;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}\n{ex.StackTrace}");
+        }
+
+        return null;
     }
 }

@@ -11,7 +11,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\NeoCommon\NeoCommon.csproj" />
     <ProjectReference Include="..\NeoCMS.Client\NeoCMS.Client.csproj" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.0-rc.2.23480.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.0" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.5" />
     <PackageReference Include="MudBlazor" Version="6.11.0" />
   </ItemGroup>

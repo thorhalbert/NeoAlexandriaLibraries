@@ -1,3 +1,4 @@
+using MudBlazor.Services;
 using NeoCMS.Client.Pages;
 using NeoCMS.Components;
 
@@ -13,6 +14,8 @@ namespace NeoCMS
             builder.Services.AddRazorComponents()
                 .AddInteractiveServerComponents()
                 .AddInteractiveWebAssemblyComponents();
+               
+            builder.Services.AddMudServices();
 
             var app = builder.Build();
 
@@ -38,3 +41,4 @@ namespace NeoCMS
         }
     }
 }
+
