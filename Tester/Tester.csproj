@@ -1,14 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
-
   <ItemGroup>
-    <PackageReference Include="MongoDB.Driver" Version="2.22.0" />
+    <PackageReference Include="MongoDB.Driver" Version="2.23.1" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\LibProtos\LibProtos.csproj" />
     <ProjectReference Include="..\NeoAssets\NeoAssets.csproj" />
@@ -18,5 +15,4 @@
     <ProjectReference Include="..\NeoRepositories\NeoRepositories.csproj" />
     <ProjectReference Include="..\NeoScry\NeoScry.csproj" />
   </ItemGroup>
-
 </Project>

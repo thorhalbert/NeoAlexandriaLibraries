@@ -9,62 +9,173 @@
 @using System.Collections.Generic
 @using System.Threading.Tasks
 @using System.Text
+@using System.Linq
+@using MudBlazor
+
 
 <h3>Movies</h3>
 
-<div style="height:500px; overflow-y:scroll" tabindex="-1">
-<Virtualize Context="movie" ItemsProvider="@LoadAllMovies">
-    <p>
-        ITEM: @movie.Title
-            <img src="@getMoviePoster(movie)" alt="Embedded Image">
 
-  
-    </p>
-</Virtualize> 
+
+<Virtualize Context="movie" ItemsProvider="@LoadAllMovies" OverscanCount="20" ItemSize="210">
+    <MudPaper Height="210" MinHeight="210" MaxHeight="210" Class="d-flex flex-wrap gap-4" Style="padding-bottom: 10px" Elevation="3">
+        <MudPaper Width="155" Height="200" Elevation="3">
+            @if (@movie._PosterImage != null)
+            {
+                <MudImage src="@movie._PosterImage" Height="200" Width="150" alt="@movie.Title" Class="rounded-lg" ObjectFit="ObjectFit.Contain" />
+            }
+        </MudPaper>
+        <MudPaper Width="300" MaxWidth="300" MinWidth="300">
+            <div class="d-flex flex-row">
+                <MudText Typo="Typo.h6"  Align="Align.Center">@movie.Title</MudText>
+                @if (@movie._IMDBLink != null)
+                {
+                    <MudLink Href="@movie._IMDBLink" Target="_blank"><MudIcon Icon="@Icons.Material.Filled.Link" Title="IMDB" /></MudLink>
+                    <MudIconButton Icon="@Icons.Material.Filled.Block" Title="Remove/Block Title" OnClick="NeverMoreTitle"/>
+                }
+            </div>
+
+            <div class="d-flex flex-column align-center">
+                <MudPaper>
+                    <MudIconButton Icon="@Icons.Material.Filled.PlayArrow" aria-label="delete"></MudIconButton>
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Primary" aria-label="delete"></MudIconButton>
+                    <MudIconButton Icon="@Icons.Material.Filled.DeleteForever" Color="Color.Secondary" aria-label="deleteforever"></MudIconButton>
+                    <MudIconButton Icon="@Icons.Material.Filled.Category" aria-label="category"></MudIconButton>
+                </MudPaper>
+
+                <MudRating MaxValue="5" />
+            </div>
+        </MudPaper>
+    </MudPaper>
+</Virtualize>
+
+@* 
+    This can only work with custom virtualization - we don't know how many horizontal elements we have
+    <MudPaper Class="d-flex flex-wrap gap-4" Elevation="0">
+        <Virtualize Context="movie" ItemsProvider="@LoadAllMovies" OverscanCount="200" ItemSize="250">
+            <MudCard Elevation="3" MaxWidth="170px">
+                <MudCardHeader>
+                    <MudText Typo="Typo.h6">@movie.Title</MudText>
+                </MudCardHeader>
+
+                <MudCardContent>
+                    @if (@movie._PosterImage != null)
+                {
+                    <MudImage src="@movie._PosterImage" Height="200" Width="150" alt="@movie.Title" Class="rounded-lg" ObjectFit="ObjectFit.Contain" />
+                }
+                <MudText>@movie.Year</MudText>
+                </MudCardContent>
+
+            </MudCard>
+        </Virtualize>
+    </MudPaper>
+ *@
+
+@* 
+<div style="height:max-content; overflow-y:scroll" tabindex="-1">
+    <table>
+        <tbody>
+            <Virtualize Context="movie" ItemsProvider="@LoadAllMovies" OverscanCount="20" ItemSize="250">
+               
+                <tr>
+                    <td>  <MudText> @movie.Title</MudText></td>
+      
+                    <td>
+                @if (@movie._PosterImage != null)
+                {
+                    <MudImage src="@movie._PosterImage" Height="200" Width="200" alt="@movie.Title" Class="rounded-lg" ObjectFit="ObjectFit.Contain" />
+                }
+                    </td>
+                </tr>
+
+            </Virtualize>
+        </tbody>
+    </table>
 </div>
+ *@
+
+
 
 @code {
 
     // https://learn.microsoft.com/en-us/aspnet/core/blazor/components/virtualization?view=aspnetcore-8.0
 
     private static IMongoCollection<MediaCuration>? _MediaCuration;
+    private string genericMovieSVG =
+        "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAxNi4wLjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjwhRE9DVFlQRSBzdmcgUFVCTElDICItLy9XM0MvL0RURCBTVkcgMS4xLy9FTiIgImh0dHA6Ly93d3cudzMub3JnL0dyYXBoaWNzL1NWRy8xLjEvRFREL3N2ZzExLmR0ZCI+DQo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB3aWR0aD0iNTEycHgiIGhlaWdodD0iNTEycHgiIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiBlbmFibGUtYmFja2dyb3VuZD0ibmV3IDAgMCA1MTIgNTEyIiB4bWw6c3BhY2U9InByZXNlcnZlIj4NCjxwYXRoIGQ9Ik0zNTIsMjU1LjVsLTE5Miw5NnYtMTkyTDM1MiwyNTUuNXogTTUxMiwzMS41djQ0OEgwdi00NDhINTEyeiBNMzIwLDk1LjVoNjR2LTMyaC02NFY5NS41eiBNMjI0LDk1LjVoNjR2LTMyaC02NFY5NS41eg0KCSBNMTI4LDk1LjVoNjR2LTMyaC02NFY5NS41eiBNMzIsOTUuNWg2NHYtMzJIMzJWOTUuNXogTTk2LDQxNS41SDMydjMyaDY0VjQxNS41eiBNMTkyLDQxNS41aC02NHYzMmg2NFY0MTUuNXogTTI4OCw0MTUuNWgtNjR2MzJoNjQNCglWNDE1LjV6IE0zODQsNDE1LjVoLTY0djMyaDY0VjQxNS41eiBNNDgwLDQxNS41aC02NHYzMmg2NFY0MTUuNXogTTQ4MCwxMjcuNUgzMnYyNTZoNDQ4VjEyNy41eiBNNDgwLDYzLjVoLTY0djMyaDY0VjYzLjV6Ii8+DQo8L3N2Zz4NCg==";
 
-    public async Task<string> getMoviePosterAsync(MediaCuration movie)
+
+    private async IAsyncEnumerable<MediaCuration> LoadAllMoviesAsync()
     {
-        //    <img src="@(async () => await getMoviePosterAsync(movie))" alt="Embedded Image">
+        //Console.WriteLine($"LoadAllMovies Called Start={request.StartIndex} Count={request.Count}");
 
-        var baseDir = Encoding.UTF8.GetString(movie.Path);
-        Console.WriteLine($"FileName: {baseDir}");
-        var fileN = FindFirstFile(baseDir, "*-poster.jpg");
-        if (fileN == null) return "";
-        Console.WriteLine($"Poster: {fileN}");
+        if (_MediaCuration == null)
+            _MediaCuration = NeoMongo.NeoDb.MediaCuration();
 
-        if (Path.Exists(fileN))
 
-            return $"data:image/jpg;base64,{Convert.ToBase64String(await File.ReadAllBytesAsync(fileN))}";
+        var filter = Builders<MediaCuration>.Filter.Eq("Repo", "MoviesR");
+        //filter = Builders<MediaCuration>.Filter.Empty;
 
-        return "";   // Ultimately pass back a default image
+        var sort = Builders<MediaCuration>.Sort.Combine(
+                        Builders<MediaCuration>.Sort.Ascending("Year"),
+                        Builders<MediaCuration>.Sort.Ascending("Title"));
+
+        //var countOptions = new CountOptions() { };
+
+        //var total = _MediaCuration.CountDocuments(filter, countOptions);
+
+        FindOptions<MediaCuration>? options = new FindOptions<MediaCuration>
+            {
+                Sort = sort
+            };
+
+        //Console.WriteLine("LoadAllMovies FindAsync");
+        var cursor = await _MediaCuration.FindAsync<MediaCuration>(filter, options);
+
+        while (await cursor.MoveNextAsync())
+        {
+            var movCur = cursor.Current;
+            foreach (var mov in movCur)
+            {
+                mov._PosterImage = null;
+                mov._IMDBLink = null;
+                yield return mov;
+            }
+        }
+    }
+
+    public void NeverMoreTitle()
+    {
+        Console.WriteLine("NeverMoreTitle() clicked");
+
     }
 
 
-    public string getMoviePoster(MediaCuration movie)
+    public string? getMoviePoster(MediaCuration movie)
     {
         var baseDir = Encoding.UTF8.GetString(movie.Path);
-        Console.WriteLine($"FileName: {baseDir}");
-        var fileN = FindFirstFile(baseDir, "*-poster.jpg");
-        if (fileN == null) return "";
-        Console.WriteLine($"Poster: {fileN}");
+        //Console.WriteLine($"FileName: {baseDir}");
+        var fileN = FindFirstFile(baseDir, null, ["*-poster.jpg", "poster.jpg", "front.jpg", "*.jpg"]);
+        if (fileN == null) return null;
+        //Console.WriteLine($"Poster: {fileN}");
 
-        if (Path.Exists(fileN))
-            return $"data:image/jpg;base64,{Convert.ToBase64String(File.ReadAllBytes(fileN))}";
+        if (Path.Exists(fileN)) {
+            var cvt = Convert.ToBase64String(File.ReadAllBytes(fileN));
+            if (cvt.Length < 1) return null;
+            var poster =  $"data:image/jpg;base64,{cvt}";
+            //var len = poster.Length;
+            //if (len < 1) return null;  // How did this happen?
+            //Console.WriteLine($"Poster: {poster.Substring(0,Math.Min(50,len))} (len={len})");
+            return poster;
+        }
 
-        return "";   // Ultimately pass back a default image
+        return null;   // Ultimately pass back a default image
     }
 
 
     private async ValueTask<ItemsProviderResult<MediaCuration>> LoadAllMovies(ItemsProviderRequest request)
     {
-        Console.WriteLine("LoadAllMovies Called");
+        //Console.WriteLine($"LoadAllMovies Called Start={request.StartIndex} Count={request.Count}");
 
         //var lst2 = new List<MediaCuration> { new MediaCuration { Title = "Title1" }, new MediaCuration { Title = "Title2" } };
         //return new ItemsProviderResult<MediaCuration>(lst2, 2);
@@ -75,27 +186,44 @@
         try
         {
 
-            var filter = Builders<MediaCuration>.Filter.Eq("Repo", "Movies");
+            var filter = Builders<MediaCuration>.Filter.Eq("Repo", "MoviesR");
+            //filter = Builders<MediaCuration>.Filter.Empty;
+
+            var sort = Builders<MediaCuration>.Sort.Combine(
+                            Builders<MediaCuration>.Sort.Ascending("Year"),
+                            Builders<MediaCuration>.Sort.Ascending("Title"));
+
+            var countOptions = new CountOptions() { };
+
+            var total = _MediaCuration.CountDocuments(filter, countOptions);
+
             var options = new FindOptions<MediaCuration>
                 {
                     Skip = request.StartIndex,
                     Limit = request.Count,
-                    Sort = Builders<MediaCuration>.Sort.Combine(
-                            Builders<MediaCuration>.Sort.Ascending("Year"),
-                            Builders<MediaCuration>.Sort.Ascending("Title")),
-                    MaxAwaitTime = new TimeSpan(0, 2, 0),
-                    MaxTime = new TimeSpan(0, 2, 0)
-                    //NoCursorTimeout = true
+                    Sort = sort
                 };
 
-            Console.WriteLine("LoadAllMovies FindAsync");
+            //Console.WriteLine("LoadAllMovies FindAsync");
             var cursor = _MediaCuration.FindSync(filter, options);
             var lst = cursor.ToList<MediaCuration>();
 
-            //foreach (var i in lst)
-            //    Console.WriteLine($"Movie: {i.Title}");
+            foreach (var i in lst) {
+                //Console.WriteLine($"Movie: {i.Title}");
+                i._PosterImage = null;
 
-            return new ItemsProviderResult<MediaCuration>(lst, request.Count);
+                var img = getMoviePoster(i);
+                if (img != null)
+                    i._PosterImage = img;
+                else i._PosterImage = genericMovieSVG;
+
+                i._IMDBLink = null;
+                if (i.IMDBs.Count > 0)
+                    i._IMDBLink = $"https://www.imdb.com/title/{i.IMDBs[0]}/";  // If more than one, just show first
+            }
+
+            Console.WriteLine($"LoadAllMovies Returns: Start={request.StartIndex} Count={request.Count} Items={lst.Count} Total={total}");
+            return new ItemsProviderResult<MediaCuration>(lst,(int) total);
         }
         catch (Exception ex)
         {
@@ -105,8 +233,59 @@
         }
     }
 
-    public static string? FindFirstFile(string directory, string pattern)
+    private List<MediaCuration> LoadAllMoviesEnumerator()
     {
+
+        if (_MediaCuration == null)
+            _MediaCuration = NeoMongo.NeoDb.MediaCuration();
+
+
+        var filter = Builders<MediaCuration>.Filter.Eq("Repo", "MoviesR");
+        //filter = Builders<MediaCuration>.Filter.Empty;
+
+        var sort = Builders<MediaCuration>.Sort.Combine(
+                        Builders<MediaCuration>.Sort.Ascending("Year"),
+                        Builders<MediaCuration>.Sort.Ascending("Title"));
+
+        var options = new FindOptions<MediaCuration>
+            {
+                Sort = sort
+            };
+
+        //Console.WriteLine("LoadAllMovies FindAsync");
+        var cursor = _MediaCuration.FindSync(filter, options);
+        var lst = cursor.ToList<MediaCuration>();
+
+        foreach (var i in lst)
+        {
+            //Console.WriteLine($"Movie: {i.Title}");
+            i._PosterImage = null;
+
+            var img = getMoviePoster(i);
+            if (img != null)
+                i._PosterImage = img;
+
+
+        }
+
+        return lst;
+    }
+
+
+
+    public static string? FindFirstFile(string directory, string? pattern, string[]? patList=null)
+    {
+        if (patList != null)
+        {
+            foreach (var pat in patList)
+            {
+                var rv = FindFirstFile(directory, pat);
+                if (rv != null) return rv;
+            }
+        }
+
+        if (pattern == null) return null;
+
         try
         {
             foreach (string file in Directory.EnumerateFiles(directory, pattern, SearchOption.TopDirectoryOnly))
@@ -127,3 +306,151 @@
         return null;
     }
 }
+
+
+
+
+
+
+
+
+
+ @*                @page "/"
+
+ FROM BARD - ADAPTIVE HEVC CODEC WITH TRANSCODING - code isn't complete
+
+<h1>Adaptive HEVC Player</h1>
+
+<div>
+    <video id="videoElement" width="640" height="480" autoplay loop>
+        <source src="@videoSourceUrl" type="video/mp4" />
+    </video>
+
+    <button @onclick="PlayVideo">Play Video</button>
+
+    <script>
+        const adaptiveHevcPlayer = new AdaptiveHevcPlayer("@videoUrl");
+        const videoElement = document.getElementById("videoElement");
+
+        adaptiveHevcPlayer.onPlayStarted = async () => {
+            // Update the video element with the appropriate source URL
+            await videoElement.srcObject.srcObject = await adaptiveHevcPlayer.GetMediaSource();
+        };
+
+        const PlayVideo = () => {
+            if (!adaptiveHevcPlayer.IsPlaying) {
+                adaptiveHevcPlayer.Play();
+            }
+        };
+    </script>
+</div>
+
+@code {
+    private string videoUrl;
+    private string videoSourceUrl;
+
+    protected override void OnInitialized() {
+        videoUrl = "https://example.com/video-chunks.json"; // Replace with actual video URL
+    }
+
+    private async Task GenerateAndPlayStream() {
+        // Check if the video format requires transcoding
+        var inputVideoUrl = "https://example.com/input-video.mp4"; // Replace with actual input video URL
+        var inputFormat = FFmpeg.Probe(inputVideoUrl).Format;
+
+        if (inputFormat != "hevc") {
+            // Transcode the video to HEVC format and generate the stream
+            await GenerateStreamAndTranscodeIfNecessary(inputVideoUrl);
+        } else {
+            // No transcoding required, generate the stream from the original video
+            await GenerateStream(inputVideoUrl);
+        }
+    }
+
+    private async Task GenerateStream(string videoUrl) {
+        var httpClient = new HttpClient();
+        var response = await httpClient.GetAsync(videoUrl);
+        var videoChunks = await response.Content.ReadAsStringAsync();
+
+        var bitrateProfiles = ParseBitrates(videoChunks);
+        var bitrateMappings = MapBitratesToChunks(bitrateProfiles);
+
+        var mediaSource = new MediaSource();
+        var videoSource = mediaSource.addSourceBuffer('video/mp4');
+
+        // Process each bitrate profile and append the corresponding video chunks to the source buffer
+        foreach (var bitrateProfile in bitrateProfiles) {
+            var chunkURLs = bitrateMappings[bitrateProfile.Bitrate];
+            foreach (var chunkURL in chunkURLs) {
+                var chunkResponse = await httpClient.GetAsync(chunkURL);
+                var chunkArrayBuffer = await chunkResponse.Content.ReadAsByteArrayAsync();
+
+                await videoSource.appendBuffer(chunkArrayBuffer);
+            }
+        }
+
+        videoSourceUrl = mediaSource.URL;
+    }
+
+    private async Task GenerateStreamAndTranscodeIfNecessary(string inputVideoUrl) {
+        var httpClient = new HttpClient();
+        var response = await httpClient.GetAsync(inputVideoUrl);
+        var videoData = await response.Content.ReadAsByteArrayAsync();
+
+        // Check if the video format requires transcoding
+        var inputFormat = FFmpeg.Probe(videoData).Format;
+        if (inputFormat != "hevc") {
+            // Transcode the video to HEVC format
+            var convertedVideoData = await TranscodeVideoToHEVC(videoData);
+
+            // Append the transcoded video chunks to the MediaSource
+            await AppendChunksToMediaSource(convertedVideoData);
+        } else {
+            // No transcoding required, append the original video chunks
+            await AppendChunksToMediaSource(videoData);
+        }
+    }
+
+    private async Task<byte[]> TranscodeVideoToHEVC(byte[] videoData) {
+        // Use FFmpegCore to transcode the video to HEVC format
+        var converter = FFmpeg.Conversions.FromBytes(videoData);
+        converter.ToHevc();
+        await converter.Start();
+
+        return await converter.ToByteArrayAsync();
+    }
+
+private async Task<byte[]> SplitVideoDataIntoChunks(byte[] videoData) {
+    // Calculate the total video duration
+    double duration = FFmpeg.Probe(videoData).Duration;
+
+    // Set the desired chunk duration (in seconds)
+    int chunkDurationInSeconds = 10;
+
+    // Determine the number of chunks
+    int numChunks = Math.Ceiling(duration / chunkDurationInSeconds);
+
+    // Initialize an array to store the chunked data
+    byte[][] chunks = new byte[numChunks][];
+
+    // Divide the video data into chunks
+    int chunkIndex = 0;
+    int startOffset = 0;
+    while (chunkIndex < numChunks) {
+        // Calculate the end offset of the current chunk
+        int endOffset = startOffset + chunkDurationInSeconds * FFmpeg.SampleRate;
+
+        // Extract the chunk data from the video data
+        byte[] chunkData = new byte[endOffset - startOffset];
+        Array.Copy(videoData, startOffset, chunkData, 0, endOffset - startOffset);
+
+        // Store the chunk data in the array
+        chunks[chunkIndex] = chunkData;
+
+        // Update the start offset for the next chunk
+        startOffset = endOffset;
+        chunkIndex++;
+    }
+
+    return chunks;
+} *@

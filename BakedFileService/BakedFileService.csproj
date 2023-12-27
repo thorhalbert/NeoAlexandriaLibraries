@@ -1,27 +1,22 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
-
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <UserSecretsId>6e66b0ed-3830-4dbc-8ab0-fd4d8d46204f</UserSecretsId>
   </PropertyGroup>
-
   <ItemGroup>
-    <PackageReference Include="Grpc.AspNetCore" Version="2.52.0" />
-    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="8.0.0-preview.2.23128.3" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="6.0.2-mauipre.1.22054.8" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.60.0-pre1" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="8.0.0" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\LibProtos\LibProtos.csproj" />
     <ProjectReference Include="..\NeoAssets\NeoAssets.csproj" />
     <ProjectReference Include="..\NeoBakedVolumes\NeoBakedVolumes.csproj" />
     <ProjectReference Include="..\NeoCommon\NeoCommon.csproj" />
   </ItemGroup>
-
   <ItemGroup>
     <Folder Include="Protos\" />
   </ItemGroup>
-
   <ItemGroup>
     <None Update="Scripts\bakedfileservice.service">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -33,5 +28,4 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-
 </Project>

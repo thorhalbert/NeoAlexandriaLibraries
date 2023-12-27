@@ -9,11 +9,20 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Components\Pages\Movies.razor.css" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Components\Pages\Movies.razor.css" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\NeoCommon\NeoCommon.csproj" />
     <ProjectReference Include="..\NeoCMS.Client\NeoCMS.Client.csproj" />
+    <PackageReference Include="FFmpeg.AutoGen" Version="6.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.0" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.5" />
-    <PackageReference Include="MudBlazor" Version="6.11.0" />
+    <PackageReference Include="MudBlazor" Version="6.11.2" />
   </ItemGroup>
 
   <ItemGroup>

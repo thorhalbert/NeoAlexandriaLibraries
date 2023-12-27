@@ -1,25 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <AssemblyName>NeoFS</AssemblyName>
   </PropertyGroup>
-
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
-
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Linux_FuseFilesystem\Linux_FuseFilesystem.csproj" />
     <ProjectReference Include="..\NeoVirtFS\NeoVirtFS.csproj" />
     <ProjectReference Include="..\Tmds.Fuse-master\src\Tmds.Fuse\Tmds.Fuse.csproj" />
   </ItemGroup>
-
   <ItemGroup>
     <None Update="Scripts\neofs.service">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -28,5 +23,4 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-
 </Project>

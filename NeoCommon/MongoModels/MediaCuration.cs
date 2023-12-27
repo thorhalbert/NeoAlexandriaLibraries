@@ -256,8 +256,10 @@ namespace NeoCommon.MongoModels
         [BsonIgnoreIfNull] public bool? Ok { get; set; }        // 600/58642
         [BsonIgnoreIfNull] public bool? MediaDelete { get; set; }       // 76/58642
         [BsonIgnoreIfNull] public string Putaway { get; set; }  // 76/58642
-        [BsonIgnoreIfNull] public BsonDocument PutawayPool { get; set; }        // 76/58642
+        //[BsonIgnoreIfNull] public BsonDocument PutawayPool { get; set; }        // 76/58642
         [BsonIgnoreIfNull] public bool? Rework { get; set; }    // 76/58642
+        [BsonIgnore] public string? _PosterImage { get; set; }
+        [BsonIgnore] public string? _IMDBLink { get; set; }
 
         [BsonExtraElements] public BsonDocument _CatchAll { get; set; }
     }

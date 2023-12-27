@@ -1,20 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>NeoAlexandria.$(MSBuildProjectName)</AssemblyName>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="Elasticsearch.Net" Version="7.17.5" />
-    <PackageReference Include="GroupDocs.Metadata" Version="23.3.0" />
+    <PackageReference Include="GroupDocs.Metadata" Version="23.12.1" />
     <PackageReference Include="KaitaiStruct.Runtime.CSharp" Version="0.10.0" />
-    <PackageReference Include="Mime-Detective" Version="22.12.14" />
-    <PackageReference Include="Mime-Detective.Definitions.Exhaustive" Version="22.12.14" />
+    <PackageReference Include="Mime-Detective" Version="23.10.1" />
+    <PackageReference Include="Mime-Detective.Definitions.Exhaustive" Version="23.10.1" />
     <PackageReference Include="NEST" Version="7.17.5" />
-    <PackageReference Include="VersOne.Epub" Version="3.3.0-alpha1" />
+    <PackageReference Include="VersOne.Epub" Version="3.3.1" />
   </ItemGroup>
-
 </Project>

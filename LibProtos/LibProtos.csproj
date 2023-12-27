@@ -1,28 +1,22 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
-
   <ItemGroup>
     <Protobuf Include="**/*.proto" />
   </ItemGroup>
-
   <ItemGroup>
     <None Remove="greet.proto" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="Google.Protobuf" Version="3.25.1" />
     <PackageReference Include="Grpc" Version="2.46.6" />
-    <PackageReference Include="Grpc.Tools" Version="2.60.0-pre1">
+    <PackageReference Include="Grpc.Tools" Version="2.60.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
-
   <ItemGroup>
     <Protobuf Update="greet.proto" GrpcServices="Both" />
   </ItemGroup>
-
 </Project>

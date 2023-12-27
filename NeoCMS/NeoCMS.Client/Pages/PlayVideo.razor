@@ -1,0 +1,128 @@
+﻿@page "/video-streaming"
+@rendermode RenderMode.InteractiveWebAssembly
+@inject IJSRuntime jsRuntime
+
+@using Microsoft.AspNetCore.SignalR.Client
+
+
+
+
+@* 
+    https://img.ly/blog/how-to-stream-videos-using-javascript-and-html5/
+    https://www.w3.org/TR/media-source-2/
+    https://developer.mozilla.org/en-US/docs/Web/API/Media_Source_Extensions_API
+    https://developer.chrome.com/blog/mse-sourcebuffer
+*@
+
+<h3>Transcoded HEVC Video Streaming</h3>
+
+
+    <video ref="videoElement" src="@videoSrc" type="video/hevc"  controls /> 
+
+
+@code {
+    private HubConnection? connection;
+    public IJSObjectReference? mediaModule;
+    public string? videoSrc;
+
+
+    public class MediaSegmentData
+    {
+        public byte[] Data { get; set; }
+        public int Offset { get; set; }
+        public int Length { get; set; }
+
+        public MediaSegmentData(byte[] data, int offset, int length)
+        {
+            Data = data;
+            Offset = offset;
+            Length = length;
+        }
+    }
+
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (connection is not null) return;
+        Console.WriteLine($"OnAfterRenderAsync - {firstRender}");
+
+
+        try
+        {
+            // Load up the javascript
+
+            if (firstRender)
+            {
+                mediaModule = await jsRuntime.InvokeAsync<IJSObjectReference>("import","./PlayVideo.js");
+                if (mediaModule is not null)
+                    Console.WriteLine("Got PlayVideo.js module handle");
+            }
+            // Set up the interop
+
+            if (mediaModule is null) return;
+
+
+            var jsMediaSource = await mediaModule.InvokeAsync<IMediaSource>("CreateMediaSource", "video/hevc");
+            var mediaSource = new MediaSource(jsMediaSource);
+
+
+            // Update the source URL
+            videoSrc = await mediaModule.InvokeAsync<string>("UpdateSourceURL");
+            Console.WriteLine($"VideoSrc={videoSrc}");
+
+            Console.WriteLine("BUild SignalR conn");
+
+            // Set up the signalR 
+            connection = new HubConnectionBuilder()
+                   .WithUrl("http://vana/videostream")
+                   .WithAutomaticReconnect()
+                   .Build();
+
+            connection.On<IAsyncEnumerable<Byte[]>>("GetVideoStream", async stream =>
+            {
+                await foreach (var item in stream)
+                {
+                    // Wait until we need it              
+                    while (mediaSource.SourceBuffers.Length > 16)
+                        await Task.Delay(2000);
+
+                    Console.WriteLine($"Add A Buffer {item.Length}");
+                    mediaSource.AddSourceBuffer(item);
+                }
+            });
+
+            //connection.On<byte[], int>("SendVideoChunk", OnVideoDataReceived);
+
+            Console.WriteLine("And start it");
+            await connection.StartAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"OnAfterRenderAsync error {ex.Message} {ex.StackTrace}");
+            if (ex.InnerException is not null)
+                Console.WriteLine($"  Inner: {ex.InnerException.Message} {ex.InnerException.StackTrace}");
+        }
+    }
+
+
+    // private async void OnVideoDataReceived(byte[] data, int count)
+    // {
+    //     Console.WriteLine($"OnVideoDataReceived - {count} byte {mediaModule is null}");
+       
+    //     if (mediaModule is null) return;
+
+    //     try {
+    //         videoSrc = await mediaModule.InvokeAsync<string>("AttachSegment", new MediaSegmentData(data, 0, count));
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         Console.WriteLine($"OnVideoDataReceived error {ex.Message} {ex.StackTrace}");
+    //         if (ex.InnerException is not null)
+    //             Console.WriteLine($"  Inner: {ex.InnerException.Message} {ex.InnerException.StackTrace}");
+    //     }
+    // }
+
+
+   
+}
+

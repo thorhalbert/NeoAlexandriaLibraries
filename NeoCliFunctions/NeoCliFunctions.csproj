@@ -1,21 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.9.1" />
-    <PackageReference Include="MongoDB.Driver" Version="2.19.0" />
+    <PackageReference Include="MongoDB.Driver" Version="2.23.1" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\BakedFileService\BakedFileService.csproj" />
     <ProjectReference Include="..\NeoBakedVolumes\NeoBakedVolumes.csproj" />
     <ProjectReference Include="..\NeoCommon\NeoCommon.csproj" />
     <ProjectReference Include="..\PenguinSanitizer\PenguinSanitizer.csproj" />
   </ItemGroup>
-
 </Project>

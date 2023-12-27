@@ -1,17 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.9.1" />
-    <PackageReference Include="System.Management.Automation" Version="7.4.0-preview.1" />
+    <PackageReference Include="System.Management.Automation" Version="7.4.0" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\BakedFileService\BakedFileService.csproj" />
     <ProjectReference Include="..\NeoCliFunctions\NeoCliFunctions.csproj" />
@@ -19,7 +16,6 @@
     <ProjectReference Include="..\NeoScry\NeoScry.csproj" />
     <ProjectReference Include="..\PenguinSanitizer\PenguinSanitizer.csproj" />
   </ItemGroup>
-
   <ItemGroup>
     <None Update="Scripts\neocli.sh">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -28,5 +24,4 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-
 </Project>
