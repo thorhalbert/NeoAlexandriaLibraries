@@ -79,7 +79,19 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeoCMS", "NeoCMS\NeoCMS\Neo
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeoCMS.Client", "NeoCMS\NeoCMS.Client\NeoCMS.Client.csproj", "{A79CE7E3-AEDC-4953-A5BC-6D006B45704F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeoLegacyLogic", "NeoLegacyLogic\NeoLegacyLogic.csproj", "{003193B6-69EE-46C6-B47C-0E29DF949301}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeoLegacyLogic", "NeoLegacyLogic\NeoLegacyLogic.csproj", "{003193B6-69EE-46C6-B47C-0E29DF949301}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeoPortal-FluentUITest", "NeoPortal\NeoPortal-FluentUITest.csproj", "{8175DF0E-0297-48D8-B872-2516CEF5C5E7}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeoBakedDecoder", "NeoBakedDecoder\NeoBakedDecoder.csproj", "{0218BEC2-5157-4F10-B785-49C8E6A779D7}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EmbyManager", "EmbyManager\EmbyManager.csproj", "{039D3FE7-D00E-4EC8-9CC1-1A9145E97F75}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EmbyAbstraction", "EmbyAbstraction\EmbyAbstraction.csproj", "{0528E04E-8CF7-42B9-9EF7-453C46B326EA}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ContentCurate", "ContentCurate\ContentCurate\ContentCurate.csproj", "{11AFD885-10CF-4D60-9682-874A3973C32B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ContentCurate.Client", "ContentCurate\ContentCurate.Client\ContentCurate.Client.csproj", "{955DDFED-469B-401F-8737-6FFF47BEEEDD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -191,6 +203,30 @@ Global
 		{003193B6-69EE-46C6-B47C-0E29DF949301}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{003193B6-69EE-46C6-B47C-0E29DF949301}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{003193B6-69EE-46C6-B47C-0E29DF949301}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8175DF0E-0297-48D8-B872-2516CEF5C5E7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8175DF0E-0297-48D8-B872-2516CEF5C5E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8175DF0E-0297-48D8-B872-2516CEF5C5E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8175DF0E-0297-48D8-B872-2516CEF5C5E7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0218BEC2-5157-4F10-B785-49C8E6A779D7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0218BEC2-5157-4F10-B785-49C8E6A779D7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0218BEC2-5157-4F10-B785-49C8E6A779D7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0218BEC2-5157-4F10-B785-49C8E6A779D7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{039D3FE7-D00E-4EC8-9CC1-1A9145E97F75}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{039D3FE7-D00E-4EC8-9CC1-1A9145E97F75}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{039D3FE7-D00E-4EC8-9CC1-1A9145E97F75}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{039D3FE7-D00E-4EC8-9CC1-1A9145E97F75}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0528E04E-8CF7-42B9-9EF7-453C46B326EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0528E04E-8CF7-42B9-9EF7-453C46B326EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0528E04E-8CF7-42B9-9EF7-453C46B326EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0528E04E-8CF7-42B9-9EF7-453C46B326EA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{11AFD885-10CF-4D60-9682-874A3973C32B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{11AFD885-10CF-4D60-9682-874A3973C32B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{11AFD885-10CF-4D60-9682-874A3973C32B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{11AFD885-10CF-4D60-9682-874A3973C32B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{955DDFED-469B-401F-8737-6FFF47BEEEDD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{955DDFED-469B-401F-8737-6FFF47BEEEDD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{955DDFED-469B-401F-8737-6FFF47BEEEDD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{955DDFED-469B-401F-8737-6FFF47BEEEDD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

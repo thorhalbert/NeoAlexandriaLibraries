@@ -11,6 +11,6 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Confluent.Kafka" Version="2.3.0" />
-    <PackageReference Include="Grpc.AspNetCore" Version="2.60.0-pre1" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.62.0" />
   </ItemGroup>
 </Project>

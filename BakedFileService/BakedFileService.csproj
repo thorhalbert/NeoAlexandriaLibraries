@@ -4,7 +4,7 @@
     <UserSecretsId>6e66b0ed-3830-4dbc-8ab0-fd4d8d46204f</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Grpc.AspNetCore" Version="2.60.0-pre1" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.62.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="8.0.0" />
   </ItemGroup>

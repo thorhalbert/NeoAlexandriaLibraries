@@ -1,4 +1,5 @@
 using BlazorVideoStreaming;
+using Microsoft.Fast.Components.FluentUI;
 using MudBlazor.Services;
 using NeoCMS.Client.Pages;
 using NeoCMS.Components;
@@ -15,8 +16,8 @@ public class Program
         builder.Services.AddRazorComponents()
             .AddInteractiveServerComponents()
             .AddInteractiveWebAssemblyComponents();
-           
-           
+
+        builder.Services.AddFluentUIComponents();
         builder.Services.AddMudServices();
         builder.Services.AddSignalR();
         //builder.Services.AddHostedService<VideoStreamingService>();
@@ -36,6 +37,7 @@ public class Program
         app.UseStaticFiles();
         app.UseAntiforgery();
 
+    
 
 
         app.MapRazorComponents<App>()
@@ -43,7 +45,7 @@ public class Program
             .AddInteractiveWebAssemblyRenderMode()
             .AddAdditionalAssemblies(typeof(Counter).Assembly);
 
-        app.MapHub<VideoStreamingHub>("/videostream");
+        //app.MapHub<VideoStreamingHub>("/videostream");
        
         app.Run();
     }

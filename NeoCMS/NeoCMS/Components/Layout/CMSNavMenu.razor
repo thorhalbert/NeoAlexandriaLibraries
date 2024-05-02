@@ -1,4 +1,14 @@
-﻿@*
+﻿<MudNavMenu>
+    <MudNavLink Href="/" Match="NavLinkMatch.All">Dashboard</MudNavLink>
+    <MudNavLink Href="/servers" Match="NavLinkMatch.Prefix">Servers</MudNavLink>
+    <MudNavGroup Title="Settings" Expanded="true">
+        <MudNavLink Href="/users"  Match="NavLinkMatch.Prefix">Users</MudNavLink>
+        <MudNavLink Href="/security"  Match="NavLinkMatch.Prefix">Security</MudNavLink>
+    </MudNavGroup>
+    <MudNavLink Href="/about"  Match="NavLinkMatch.Prefix">About</MudNavLink>
+</MudNavMenu>
+
+@*
     Dashboard
         Playlist Progress
         Watched New Content
@@ -66,18 +76,18 @@
 *@
 
 
-<MudNavMenu>
+@* <MudNavMenu>
     <MudNavLink Href="/" Match="NavLinkMatch.All">Dashboard</MudNavLink>
     <MudNavLink Href="/videos" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.VideoLibrary">Videos</MudNavLink>
 
-    <MudNavGroup Title="Miners" Expanded=true>
+    <MudNavGroup Title="Miners" Expanded="@MinerGroup">
         <MudNavLink Href="/downloads" Match="NavLinkMatch.Prefix">Engine Status</MudNavLink>
         <MudNavLink Href="/storage" Match="NavLinkMatch.Prefix">Storage</MudNavLink>
         <MudNavLink Href="/workflow" Match="NavLinkMatch.Prefix">Workflow</MudNavLink>
         <MudNavLink Href="/episodes" Match="NavLinkMatch.Prefix">Episodes</MudNavLink>
         <MudNavLink Href="/standingSearches" Match="NavLinkMatch.Prefix">Searches</MudNavLink>
     </MudNavGroup>
-    <MudNavGroup Title="Settings/Setup" Expanded=true>
+    <MudNavGroup Title="Settings/Setup" Expanded="@SettingsGroup">
         <MudNavLink Href="/users" Match="NavLinkMatch.Prefix">Users</MudNavLink>
         <MudNavLink Href="/storage" Match="NavLinkMatch.Prefix">Storage</MudNavLink>
         <MudNavLink Href="/narps" Match="NavLinkMatch.Prefix">NARPS</MudNavLink>
@@ -87,8 +97,10 @@
 </MudNavMenu>
 
 @code {
+    [Parameter]    public bool MinerGroup { get; set; }
+    [Parameter] public bool SettingsGroup { get; set; }
 
-}
+} *@
 
 
 @* 

@@ -10,14 +10,64 @@
 @using System.Threading.Tasks
 @using System.Text
 @using System.Linq
-@using MudBlazor
-
+@using System.Text.Json
+@using MongoDB.Bson
+@using MongoDB.Bson.IO
+@using MongoDB.Bson.Serialization
 
 <h3>Movies</h3>
 
 
+@* <MudSelect MultiSelectionTextFunc="@(new Func<List<string>, string>(GetMultiSelectionText))" MultiSelection="true" @bind-Value="value" @bind-SelectedValues="options" T="string" Label="US States" AdornmentIcon="@Icons.Material.Filled.Search" AnchorOrigin="Origin.BottomCenter">
+    @foreach (var state in states)
+    {
+        <MudSelectItem T="string" Value="@state">@state</MudSelectItem>
+    }
+</MudSelect>
+
+<MudSwitch @bind-Checked="multiselectionTextChoice" Class="mud-width-full" Color="Color.Primary">MultiSelection Text choice</MudSwitch> *@
+
+
+
+
 
 <Virtualize Context="movie" ItemsProvider="@LoadAllMovies" OverscanCount="20" ItemSize="210">
+
+
+
+
+@*     <MudPaper Height="210" MinHeight="210" MaxHeight="210" Class="d-flex flex-wrap gap-4" Style="padding-bottom: 10px" Elevation="3">
+        <MudPaper Width="155" Height="200" Elevation="3">
+            @if (@movie._PosterImage != null)
+            {
+                <MudImage src="@movie._PosterImage" Height="200" Width="150" alt="@movie.Title" Class="rounded-lg" ObjectFit="ObjectFit.Contain" />
+            }
+        </MudPaper>
+        <MudPaper>
+            <div class="d-flex flex-row">
+                <MudText Typo="Typo.h6"  Align="Align.Left">@movie.Title</MudText>
+                    @if (@movie._IMDBLink != null)
+                {
+                    <MudLink Href="@movie._IMDBLink" Target="_blank"><MudIcon Icon="@Icons.Material.Filled.Link" Title="IMDB" /></MudLink>
+                    <MudIconButton Icon="@Icons.Material.Filled.Block" Title="Remove/Block Title" OnClick="NeverMoreTitle" aria-label="@movie._id" />
+                }
+            </div>
+
+            <div class="d-flex flex-column align-left">
+                <MudPaper>
+                    <MudIconButton Icon="@Icons.Material.Filled.PlayArrow" aria-label="@movie._id" ></MudIconButton>
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Primary" aria-label="@movie._id"></MudIconButton>
+                    <MudIconButton Icon="@Icons.Material.Filled.DeleteForever" Color="Color.Secondary" aria-label="@movie._id"></MudIconButton>
+                    <MudIconButton Icon="@Icons.Material.Filled.Category" aria-label="@movie._id"></MudIconButton>
+                </MudPaper>
+
+                <MudRating MaxValue="5" />
+            </div>
+        </MudPaper>
+    </MudPaper> *@
+</Virtualize>
+
+@* <Virtualize Context="movie" ItemsProvider="@LoadAllMovies" OverscanCount="20" ItemSize="210">
     <MudPaper Height="210" MinHeight="210" MaxHeight="210" Class="d-flex flex-wrap gap-4" Style="padding-bottom: 10px" Elevation="3">
         <MudPaper Width="155" Height="200" Elevation="3">
             @if (@movie._PosterImage != null)
@@ -25,29 +75,29 @@
                 <MudImage src="@movie._PosterImage" Height="200" Width="150" alt="@movie.Title" Class="rounded-lg" ObjectFit="ObjectFit.Contain" />
             }
         </MudPaper>
-        <MudPaper Width="300" MaxWidth="300" MinWidth="300">
+        <MudPaper>
             <div class="d-flex flex-row">
-                <MudText Typo="Typo.h6"  Align="Align.Center">@movie.Title</MudText>
-                @if (@movie._IMDBLink != null)
+                <MudText Typo="Typo.h6" Align="Align.Left">@movie.Title</MudText>
+                    @if (@movie._IMDBLink != null)
                 {
                     <MudLink Href="@movie._IMDBLink" Target="_blank"><MudIcon Icon="@Icons.Material.Filled.Link" Title="IMDB" /></MudLink>
-                    <MudIconButton Icon="@Icons.Material.Filled.Block" Title="Remove/Block Title" OnClick="NeverMoreTitle"/>
+                    <MudIconButton Icon="@Icons.Material.Filled.Block" Title="Remove/Block Title" OnClick="NeverMoreTitle" aria-label="@movie._id" />
                 }
             </div>
 
-            <div class="d-flex flex-column align-center">
+            <div class="d-flex flex-column align-left">
                 <MudPaper>
-                    <MudIconButton Icon="@Icons.Material.Filled.PlayArrow" aria-label="delete"></MudIconButton>
-                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Primary" aria-label="delete"></MudIconButton>
-                    <MudIconButton Icon="@Icons.Material.Filled.DeleteForever" Color="Color.Secondary" aria-label="deleteforever"></MudIconButton>
-                    <MudIconButton Icon="@Icons.Material.Filled.Category" aria-label="category"></MudIconButton>
+                    <MudIconButton Icon="@Icons.Material.Filled.PlayArrow" aria-label="@movie._id"></MudIconButton>
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Primary" aria-label="@movie._id"></MudIconButton>
+                    <MudIconButton Icon="@Icons.Material.Filled.DeleteForever" Color="Color.Secondary" aria-label="@movie._id"></MudIconButton>
+                    <MudIconButton Icon="@Icons.Material.Filled.Category" aria-label="@movie._id"></MudIconButton>
                 </MudPaper>
 
                 <MudRating MaxValue="5" />
             </div>
         </MudPaper>
     </MudPaper>
-</Virtualize>
+</Virtualize> *@
 
 @* 
     This can only work with custom virtualization - we don't know how many horizontal elements we have
@@ -76,10 +126,10 @@
     <table>
         <tbody>
             <Virtualize Context="movie" ItemsProvider="@LoadAllMovies" OverscanCount="20" ItemSize="250">
-               
+
                 <tr>
                     <td>  <MudText> @movie.Title</MudText></td>
-      
+
                     <td>
                 @if (@movie._PosterImage != null)
                 {
@@ -97,21 +147,62 @@
 
 
 @code {
+    // States example multi-dropdown
+
+
+    // private bool multiselectionTextChoice;
+    // private string value { get; set; } = "Nothing selected";
+    // private IEnumerable<string> options { get; set; } = new HashSet<string>() { "Alaska" };
+
+    // private string[] states =
+    // {
+    //     "Alabama", "Alaska", "American Samoa", "Arizona",
+    //     "Arkansas", "California", "Colorado", "Connecticut",
+    //     "Delaware", "District of Columbia", "Federated States of Micronesia",
+    //     "Florida", "Georgia", "Guam", "Hawaii", "Idaho",
+    //     "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky",
+    //     "Louisiana", "Maine", "Marshall Islands", "Maryland",
+    //     "Massachusetts", "Michigan", "Minnesota", "Mississippi",
+    //     "Missouri", "Montana", "Nebraska", "Nevada",
+    //     "New Hampshire", "New Jersey", "New Mexico", "New York",
+    //     "North Carolina", "North Dakota", "Northern Mariana Islands", "Ohio",
+    //     "Oklahoma", "Oregon", "Palau", "Pennsylvania", "Puerto Rico",
+    //     "Rhode Island", "South Carolina", "South Dakota", "Tennessee",
+    //     "Texas", "Utah", "Vermont", "Virgin Island", "Virginia",
+    //     "Washington", "West Virginia", "Wisconsin", "Wyoming",
+    // };
+
+    // private string GetMultiSelectionText(List<string> selectedValues)
+    // {
+    //     if (multiselectionTextChoice)
+    //     {
+    //         return $"Selected state{(selectedValues.Count > 1 ? "s" : "")}: {string.Join(", ", selectedValues.Select(x => x))}";
+    //     }
+    //     else
+    //     {
+    //         return $"{selectedValues.Count} state{(selectedValues.Count > 1 ? "s have" : " has")} been selected";
+    //     }
+    // }
+
+
 
     // https://learn.microsoft.com/en-us/aspnet/core/blazor/components/virtualization?view=aspnetcore-8.0
 
     private static IMongoCollection<MediaCuration>? _MediaCuration;
-    private string genericMovieSVG =
-        "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAxNi4wLjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjwhRE9DVFlQRSBzdmcgUFVCTElDICItLy9XM0MvL0RURCBTVkcgMS4xLy9FTiIgImh0dHA6Ly93d3cudzMub3JnL0dyYXBoaWNzL1NWRy8xLjEvRFREL3N2ZzExLmR0ZCI+DQo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB3aWR0aD0iNTEycHgiIGhlaWdodD0iNTEycHgiIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiBlbmFibGUtYmFja2dyb3VuZD0ibmV3IDAgMCA1MTIgNTEyIiB4bWw6c3BhY2U9InByZXNlcnZlIj4NCjxwYXRoIGQ9Ik0zNTIsMjU1LjVsLTE5Miw5NnYtMTkyTDM1MiwyNTUuNXogTTUxMiwzMS41djQ0OEgwdi00NDhINTEyeiBNMzIwLDk1LjVoNjR2LTMyaC02NFY5NS41eiBNMjI0LDk1LjVoNjR2LTMyaC02NFY5NS41eg0KCSBNMTI4LDk1LjVoNjR2LTMyaC02NFY5NS41eiBNMzIsOTUuNWg2NHYtMzJIMzJWOTUuNXogTTk2LDQxNS41SDMydjMyaDY0VjQxNS41eiBNMTkyLDQxNS41aC02NHYzMmg2NFY0MTUuNXogTTI4OCw0MTUuNWgtNjR2MzJoNjQNCglWNDE1LjV6IE0zODQsNDE1LjVoLTY0djMyaDY0VjQxNS41eiBNNDgwLDQxNS41aC02NHYzMmg2NFY0MTUuNXogTTQ4MCwxMjcuNUgzMnYyNTZoNDQ4VjEyNy41eiBNNDgwLDYzLjVoLTY0djMyaDY0VjYzLjV6Ii8+DQo8L3N2Zz4NCg==";
+    private static IMongoCollection<IMDBMovies>? _IMDBMovies;
+
+    private string genericMovieSVG = "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAxNi4wLjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjwhRE9DVFlQRSBzdmcgUFVCTElDICItLy9XM0MvL0RURCBTVkcgMS4xLy9FTiIgImh0dHA6Ly93d3cudzMub3JnL0dyYXBoaWNzL1NWRy8xLjEvRFREL3N2ZzExLmR0ZCI+DQo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB3aWR0aD0iNTEycHgiIGhlaWdodD0iNTEycHgiIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiBlbmFibGUtYmFja2dyb3VuZD0ibmV3IDAgMCA1MTIgNTEyIiB4bWw6c3BhY2U9InByZXNlcnZlIj4NCjxwYXRoIGQ9Ik0zNTIsMjU1LjVsLTE5Miw5NnYtMTkyTDM1MiwyNTUuNXogTTUxMiwzMS41djQ0OEgwdi00NDhINTEyeiBNMzIwLDk1LjVoNjR2LTMyaC02NFY5NS41eiBNMjI0LDk1LjVoNjR2LTMyaC02NFY5NS41eg0KCSBNMTI4LDk1LjVoNjR2LTMyaC02NFY5NS41eiBNMzIsOTUuNWg2NHYtMzJIMzJWOTUuNXogTTk2LDQxNS41SDMydjMyaDY0VjQxNS41eiBNMTkyLDQxNS41aC02NHYzMmg2NFY0MTUuNXogTTI4OCw0MTUuNWgtNjR2MzJoNjQNCglWNDE1LjV6IE0zODQsNDE1LjVoLTY0djMyaDY0VjQxNS41eiBNNDgwLDQxNS41aC02NHYzMmg2NFY0MTUuNXogTTQ4MCwxMjcuNUgzMnYyNTZoNDQ4VjEyNy41eiBNNDgwLDYzLjVoLTY0djMyaDY0VjYzLjV6Ii8+DQo8L3N2Zz4NCg==";
 
 
     private async IAsyncEnumerable<MediaCuration> LoadAllMoviesAsync()
     {
         //Console.WriteLine($"LoadAllMovies Called Start={request.StartIndex} Count={request.Count}");
 
+        // Attach our collections
         if (_MediaCuration == null)
             _MediaCuration = NeoMongo.NeoDb.MediaCuration();
-
+        if (_IMDBMovies == null)
+            _IMDBMovies = NeoMongo.NeoDb.IMDBMovies();
 
         var filter = Builders<MediaCuration>.Filter.Eq("Repo", "MoviesR");
         //filter = Builders<MediaCuration>.Filter.Empty;
@@ -150,26 +241,47 @@
 
     }
 
-
-    public string? getMoviePoster(MediaCuration movie)
+    public string? GetBaseImg(string? fileN)
     {
-        var baseDir = Encoding.UTF8.GetString(movie.Path);
-        //Console.WriteLine($"FileName: {baseDir}");
-        var fileN = FindFirstFile(baseDir, null, ["*-poster.jpg", "poster.jpg", "front.jpg", "*.jpg"]);
-        if (fileN == null) return null;
-        //Console.WriteLine($"Poster: {fileN}");
-
-        if (Path.Exists(fileN)) {
+        if (fileN is null) return null;
+        if (Path.Exists(fileN))
+        {
             var cvt = Convert.ToBase64String(File.ReadAllBytes(fileN));
             if (cvt.Length < 1) return null;
-            var poster =  $"data:image/jpg;base64,{cvt}";
-            //var len = poster.Length;
-            //if (len < 1) return null;  // How did this happen?
-            //Console.WriteLine($"Poster: {poster.Substring(0,Math.Min(50,len))} (len={len})");
+            var poster = $"data:image/jpg;base64,{cvt}";
             return poster;
         }
+        return null;
+    }
 
-        return null;   // Ultimately pass back a default image
+    public string? getMoviePoster(MediaCuration movie, Dictionary<string, IMDBMovies?> imdbRecs)
+    {
+        var baseDir = Encoding.UTF8.GetString(movie.Path);
+
+        // Go for any poster-looking file we can find
+        var fileN = FindFirstFile(baseDir, null, ["*-poster.jpg", "poster.jpg", "front.jpg", "cover.jpg"]);
+        var img = GetBaseImg(fileN);
+        if (img is not null) return img;
+
+        // Get the imdb poster
+
+        // Look up the actual imdb record (and save it) - these are going to be random 
+        foreach (var key in imdbRecs)
+        {
+            var imdb = key.Value;
+            if (imdb is null) continue;
+
+             var poster = imdb?.Movie?.full_size_cover_url?.content;
+             if (poster is not null) return poster;
+        }
+
+        // If no imdb, get any file we can find
+        fileN = FindFirstFile(baseDir, null, ["*.jpg"]);
+        img = GetBaseImg(fileN);
+        if (img is not null) return img;
+
+        // This is the catchall
+        return genericMovieSVG;
     }
 
 
@@ -183,10 +295,13 @@
         if (_MediaCuration == null)
             _MediaCuration = NeoMongo.NeoDb.MediaCuration();
 
+        if (_IMDBMovies == null)
+            _IMDBMovies = NeoMongo.NeoDb.IMDBMovies();
+
         try
         {
 
-            var filter = Builders<MediaCuration>.Filter.Eq("Repo", "MoviesR");
+            var filter = Builders<MediaCuration>.Filter.Eq("Repo", "Movies");
             //filter = Builders<MediaCuration>.Filter.Empty;
 
             var sort = Builders<MediaCuration>.Sort.Combine(
@@ -209,28 +324,82 @@
             var lst = cursor.ToList<MediaCuration>();
 
             foreach (var i in lst) {
-                //Console.WriteLine($"Movie: {i.Title}");
-                i._PosterImage = null;
+                Dictionary<string, IMDBMovies?> imdbRecs = await GetIMDBs(i.IMDBs);
+                foreach (var j in imdbRecs)
+                {
+                    var mov = j.Value.Movie._CatchAll;
 
-                var img = getMoviePoster(i);
-                if (img != null)
-                    i._PosterImage = img;
-                else i._PosterImage = genericMovieSVG;
+                    //var jsopts = new JsonSerializerOptions { WriteIndented = true };
+                    //string formattedJson = JsonSerializer.Serialize(mov, jsopts);
+                    //Console.WriteLine($"IMDB {j.Key}:\n"+formattedJson);
+
+                    dumpRec(mov);
+
+                    // using (var jsonWriter = new JsonWriter(new StringWriter()))
+                    // {
+                    //     BsonSerializer.Serialize(jsonWriter, mov);
+                    //     var bsonString = jsonWriter.ToString();
+                    //     Console.WriteLine(bsonString);
+                    // }
+                }
+
+                //Console.WriteLine($"Movie: {i.Title}");
+                i._PosterImage = getMoviePoster(i, imdbRecs);
 
                 i._IMDBLink = null;
-                if (i.IMDBs.Count > 0)
+                if (i.IMDBs is not null && i.IMDBs.Count > 0)
                     i._IMDBLink = $"https://www.imdb.com/title/{i.IMDBs[0]}/";  // If more than one, just show first
             }
 
             Console.WriteLine($"LoadAllMovies Returns: Start={request.StartIndex} Count={request.Count} Items={lst.Count} Total={total}");
-            return new ItemsProviderResult<MediaCuration>(lst,(int) total);
+            return new ItemsProviderResult<MediaCuration>(lst, (int)total);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error: {ex.Message}");
+            Console.WriteLine($"Error: {ex.Message}\n{ex.StackTrace}");
             var lst3 = new List<MediaCuration> { new MediaCuration { Title = ex.Message } };
             return new ItemsProviderResult<MediaCuration>(lst3, request.Count);
         }
+    }
+
+    private void dumpRec(BsonDocument mov, int ind = 0)
+    {
+        foreach (var key in mov)
+        {
+            var indv = "";
+            for (var i = 0; i < ind; i++) indv += "    ";
+
+            string val = "NULL";
+            if (key.Value is not null)
+                val = key.Value.ToString();  // Default
+            Console.WriteLine($"{indv}{key.Name} = {val}");
+        }
+    }
+
+    private async Task<Dictionary<string, IMDBMovies?>> GetIMDBs(List<string> imdbs)
+    {
+        Dictionary<string, IMDBMovies?> ret = [];
+        if (_IMDBMovies is null) return [];
+
+        if (imdbs is not null)
+            foreach (var i in imdbs)
+            {
+                ret[i] = null;
+
+                Console.WriteLine($"Look for IMDB: {i}");
+
+                // Learned important lesson here - you can't chain where you have nested awaits
+
+                var outd = await _IMDBMovies.FindAsync<IMDBMovies>(Builders<IMDBMovies>.Filter.Eq("_id", i));
+                var outa = await outd.ToListAsync();
+                if (outa.Count > 0)
+                {
+                    ret[i] = outa[0];
+                    Console.WriteLine("[Found Result]");
+                }
+            }
+
+        return ret;
     }
 
     private List<MediaCuration> LoadAllMoviesEnumerator()
@@ -259,13 +428,7 @@
         foreach (var i in lst)
         {
             //Console.WriteLine($"Movie: {i.Title}");
-            i._PosterImage = null;
-
-            var img = getMoviePoster(i);
-            if (img != null)
-                i._PosterImage = img;
-
-
+       //     i._PosterImage = getMoviePoster(i);
         }
 
         return lst;

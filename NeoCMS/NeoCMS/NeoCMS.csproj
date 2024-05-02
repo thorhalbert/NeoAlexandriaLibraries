@@ -19,10 +19,14 @@
   <ItemGroup>
     <ProjectReference Include="..\..\NeoCommon\NeoCommon.csproj" />
     <ProjectReference Include="..\NeoCMS.Client\NeoCMS.Client.csproj" />
-    <PackageReference Include="FFmpeg.AutoGen" Version="6.1.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.0" />
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.5" />
-    <PackageReference Include="MudBlazor" Version="6.11.2" />
+    <PackageReference Include="FFmpeg.AutoGen" Version="7.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.4" />
+    <PackageReference Include="Microsoft.Fast.Components.FluentUI" Version="3.7.0" />
+    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.7.1" />
+    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Emoji" Version="4.6.0" />
+    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="4.7.0" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.20.1" />
+    <PackageReference Include="MudBlazor" Version="6.19.1" />
   </ItemGroup>
 
   <ItemGroup>
